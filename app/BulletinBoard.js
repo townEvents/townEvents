@@ -426,7 +426,7 @@ export default function Bulletin() {
           <div style={{ maxWidth: 420 }}>
             <h3 style={{ fontFamily: "'Special Elite', monospace", fontSize: 18, margin: "0 0 4px" }}>Get it in your inbox</h3>
             <p style={{ fontSize: 13.5, color: "#5A5040", margin: 0, lineHeight: 1.4 }}>
-              A weekly roundup of what's coming up, every Monday morning.
+              A weekly roundup of what's coming up, every Monday morning. (coming soon)
             </p>
           </div>
           <form onSubmit={handleSubscribe} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -450,7 +450,7 @@ export default function Bulletin() {
           {subStatus === "error" && <p style={{ width: "100%", margin: 0, fontSize: 13, color: "#9A3324" }}>Something went wrong — try again in a moment.</p>}
         </section>
         <p style={{ fontSize: 11.5, color: "#8A7E68", marginTop: 8 }}>
-          Signups are saved to the database. Sending the actual weekly email is a separate step we're holding off on for now.
+          Email signups will be used to send weekly event summaries, which may include sponsored content.
         </p>
       </main>
     </div>
