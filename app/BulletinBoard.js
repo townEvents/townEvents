@@ -185,7 +185,7 @@ export default function Bulletin() {
             Rutherford Bulletin
           </h1>
           <p style={{ margin: "6px 0 0", fontSize: 15, color: "#5A5040" }}>
-            What's happening in town.
+            What's happening around town.
           </p>
         </div>
       </header>
