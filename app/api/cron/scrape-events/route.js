@@ -10,6 +10,20 @@ export const maxDuration = 120;
 const TOWNS = ["Rutherford", "East Rutherford", "Carlstadt", "Lyndhurst", "North Arlington", "Wallington"];
 const CATEGORIES = ["Music", "Market", "Kids & Family", "Meeting / Civic", "Sports & Rec", "Arts & Culture", "Other"];
 
+// Backup filter — the prompt already tells Claude to skip adult content,
+// but this catches anything that slips through before it ever reaches the
+// database. Deliberately conservative wording; extend this list if
+// something inappropriate gets through despite it.
+const BLOCKED_KEYWORDS = [
+  "adult film", "porn", "xxx", "strip club", "strippers", "burlesque",
+  "erotic", "swingers", "gentlemen's club",
+];
+
+function containsBlockedContent(candidate) {
+  const text = `${candidate.title || ""} ${candidate.description || ""} ${candidate.location || ""}`.toLowerCase();
+  return BLOCKED_KEYWORDS.some((word) => text.includes(word));
+}
+
 function normalize(str) {
   return (str || "")
     .toLowerCase()
@@ -68,6 +82,13 @@ markets, town council or board meetings, concerts, kids' programs, sports
 leagues, and community fairs. Skip anything private or not open to the
 public.
 
+This is a general community bulletin. Adult-audience events are completely
+fine to include — bars, breweries, wine tastings, 21+ nights, comedy shows,
+and similar are all normal community events, include them. The only thing
+to exclude is events centered on sexual or explicit adult content — for
+example, adult film screenings/expos, strip club or burlesque events, or
+similar. Everything else stays in, regardless of the audience it's aimed at.
+
 Also note if any event — including a normally recurring one — has been
 explicitly reported as cancelled or postponed.
 
@@ -124,11 +145,17 @@ If you find no qualifying events, respond with exactly: []`;
   let inserted = 0;
   let cancelled = 0;
   let skipped = 0;
+  let filtered = 0;
   const errors = [];
 
   for (const c of candidates) {
     if (!c.title || !c.date || !c.town) {
       skipped++;
+      continue;
+    }
+
+    if (containsBlockedContent(c)) {
+      filtered++;
       continue;
     }
 
@@ -175,6 +202,7 @@ If you find no qualifying events, respond with exactly: []`;
     inserted,
     cancelled,
     skipped,
+    filtered,
     errors,
   });
 }
