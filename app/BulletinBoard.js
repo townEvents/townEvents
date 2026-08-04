@@ -457,10 +457,22 @@ export default function Bulletin() {
   );
 }
 
+function wasEdited(e) {
+  if (!e.updated_at || !e.created_at) return false;
+  // A little slack so the initial insert itself doesn't count as an edit.
+  return new Date(e.updated_at).getTime() - new Date(e.created_at).getTime() > 60000;
+}
+
+function formatShortDate(dateLike) {
+  const d = new Date(dateLike);
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 function EventCard({ e }) {
   const rot = hashRotation(e.id);
   const color = CATS[e.category] || CATS.Other;
   const cancelled = e.status === "cancelled";
+  const edited = wasEdited(e);
   return (
     <div
       className="be-card"
@@ -529,6 +541,14 @@ function EventCard({ e }) {
       </p>
       {e.description && (
         <p style={{ fontSize: 14, margin: 0, color: "#3A332B", lineHeight: 1.4 }}>{e.description}</p>
+      )}
+      {edited && !cancelled && (
+        <p
+          className="be-label"
+          style={{ fontSize: 10.5, color: "#8A7E68", margin: "8px 0 0", letterSpacing: "0.03em" }}
+        >
+          ✎ updated {formatShortDate(e.updated_at)}
+        </p>
       )}
     </div>
   );

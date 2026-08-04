@@ -135,7 +135,7 @@ If you find no qualifying events, respond with exactly: []`;
 
   const { data: existing, error: fetchError } = await supabaseAdmin
     .from("events")
-    .select("id, title, date, town, status")
+    .select("id, title, date, town, status, time, description, location, category, source_url, source")
     .gte("date", todayStr);
 
   if (fetchError) {
@@ -144,6 +144,7 @@ If you find no qualifying events, respond with exactly: []`;
 
   let inserted = 0;
   let cancelled = 0;
+  let enriched = 0;
   let skipped = 0;
   let filtered = 0;
   const errors = [];
@@ -164,13 +165,41 @@ If you find no qualifying events, respond with exactly: []`;
     );
 
     if (match) {
-      // Already on the board. Only act if this run found a cancellation
-      // that isn't reflected yet — applied automatically, since getting a
-      // cancellation wrong is low-risk (an event just shows as cancelled).
+      const patch = {};
+
+      // Cancellation takes priority and overrides other fields below.
       if (c.status === "cancelled" && match.status !== "cancelled") {
-        const { error } = await supabaseAdmin.from("events").update({ status: "cancelled" }).eq("id", match.id);
-        if (error) errors.push(error.message);
-        else cancelled++;
+        patch.status = "cancelled";
+      }
+
+      // Fill in / correct fields on matched events. AI-found events can be
+      // fully overwritten if a later pass finds different info (e.g. a
+      // time that changes from 7pm to 8pm) — that's the AI correcting
+      // itself. Manually-added events (Table Editor or the /add form) are
+      // only ever filled in where blank, never overwritten, so a human's
+      // entry can't get silently replaced by a possibly-wrong AI guess.
+      const protectExisting = match.source === "manual";
+      const fillable = ["time", "description", "location", "category", "source_url"];
+      for (const field of fillable) {
+        const existingValue = (match[field] || "").toString().trim();
+        const candidateValue = (c[field] || "").toString().trim();
+        if (!candidateValue) continue;
+        if (protectExisting) {
+          if (!existingValue) patch[field] = candidateValue;
+        } else if (candidateValue !== existingValue) {
+          patch[field] = candidateValue;
+        }
+      }
+
+      if (Object.keys(patch).length > 0) {
+        const { error } = await supabaseAdmin.from("events").update(patch).eq("id", match.id);
+        if (error) {
+          errors.push(error.message);
+        } else if (patch.status === "cancelled") {
+          cancelled++;
+        } else {
+          enriched++;
+        }
       } else {
         skipped++;
       }
@@ -201,6 +230,7 @@ If you find no qualifying events, respond with exactly: []`;
     found: candidates.length,
     inserted,
     cancelled,
+    enriched,
     skipped,
     filtered,
     errors,
