@@ -33,7 +33,16 @@ function titlesLikelySame(a, b) {
 
 export async function GET(request) {
   const authHeader = request.headers.get("authorization");
-  if (!process.env.CRON_SECRET || authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  const configuredSecret = process.env.CRON_SECRET;
+
+  // TEMPORARY DEBUG LOGGING — remove once auth is confirmed working.
+  // Doesn't log the full secret, just enough to diagnose a mismatch.
+  console.log("[cron debug] CRON_SECRET is set:", Boolean(configuredSecret));
+  console.log("[cron debug] CRON_SECRET length:", configuredSecret ? configuredSecret.length : 0);
+  console.log("[cron debug] CRON_SECRET first 3 chars:", configuredSecret ? configuredSecret.slice(0, 3) : "n/a");
+  console.log("[cron debug] Authorization header received:", authHeader ? `${authHeader.slice(0, 10)}...` : "none");
+
+  if (!configuredSecret || authHeader !== `Bearer ${configuredSecret}`) {
     return new Response("Unauthorized", { status: 401 });
   }
 
