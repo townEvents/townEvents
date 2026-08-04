@@ -1,6 +1,6 @@
 export const metadata = {
-  title: "The Valley Bulletin",
-  description: "What's happening in the towns around you.",
+  title: "Rutherford Bulletin",
+  description: "What's happening in Rutherford, NJ and the surrounding towns.",
 };
 
 export default function RootLayout({ children }) {
