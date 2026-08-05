@@ -438,7 +438,7 @@ export default function Bulletin() {
           <div style={{ maxWidth: 420 }}>
             <h3 style={{ fontFamily: "'Special Elite', monospace", fontSize: 18, margin: "0 0 4px" }}>Get it in your inbox</h3>
             <p style={{ fontSize: 13.5, color: "#5A5040", margin: 0, lineHeight: 1.4 }}>
-              A weekly roundup of what's coming up, every Monday morning. (coming soon)
+              A weekly roundup of what's coming up, every Monday morning.
             </p>
           </div>
           <form onSubmit={handleSubscribe} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
