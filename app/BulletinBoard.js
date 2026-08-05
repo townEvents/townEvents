@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
 
 const CATS = {
@@ -76,6 +76,40 @@ export default function Bulletin() {
 
   const [email, setEmail] = useState("");
   const [subStatus, setSubStatus] = useState(""); // "", "success", "duplicate", "error", "invalid"
+
+  const turnstileContainerRef = useRef(null);
+  const turnstileWidgetIdRef = useRef(null);
+  const turnstileTokenRef = useRef("");
+
+  // Load Cloudflare Turnstile once, then render an invisible widget that
+  // verifies real visitors with no click or puzzle for legitimate people -
+  // it only challenges something that looks bot-like, and even then it's
+  // a quick automatic check, not a "select all the traffic lights" style
+  // interaction.
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY) return;
+
+    function renderWidget() {
+      if (!window.turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return;
+      turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+        sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
+        size: "invisible",
+        callback: (token) => {
+          turnstileTokenRef.current = token;
+        },
+      });
+    }
+
+    if (window.turnstile) {
+      renderWidget();
+    } else {
+      const script = document.createElement("script");
+      script.src = "https://challenges.cloudflare.com/turnstile/v0/api.js";
+      script.async = true;
+      script.onload = renderWidget;
+      document.body.appendChild(script);
+    }
+  }, []);
 
   useEffect(() => {
     (async () => {
@@ -155,9 +189,16 @@ export default function Bulletin() {
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), turnstileToken: turnstileTokenRef.current }),
       });
       const data = await res.json();
+
+      // Get a fresh token ready for the next attempt - each token can
+      // only be used once.
+      if (window.turnstile && turnstileWidgetIdRef.current) {
+        window.turnstile.reset(turnstileWidgetIdRef.current);
+        turnstileTokenRef.current = "";
+      }
 
       if (!res.ok) {
         setSubStatus(data.error === "invalid" ? "invalid" : "error");
@@ -442,6 +483,7 @@ export default function Bulletin() {
             </p>
           </div>
           <form onSubmit={handleSubscribe} style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+            <div ref={turnstileContainerRef}></div>
             <input
               type="email"
               placeholder="you@example.com"
