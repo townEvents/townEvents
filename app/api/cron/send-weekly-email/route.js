@@ -87,11 +87,14 @@ export async function GET(request) {
   // In practice these are often the same ID from the same Audience in your
   // dashboard, but Resend has been evolving this naming. Passing both here
   // as a safe bet — if the API rejects one as an unrecognized field, drop it.
+  const weekStartCompact = startStr.replace(/-/g, ""); // e.g. 20260810
+
   const { data: broadcast, error: createError } = await resend.broadcasts.create({
     audienceId: process.env.RESEND_AUDIENCE_ID,
     segmentId: process.env.RESEND_AUDIENCE_ID,
     from: process.env.RESEND_FROM_EMAIL,
     subject,
+    name: `Rutherford Bulletin - Week of ${weekStartCompact}`,
     react: emailElement,
   });
 
