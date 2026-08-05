@@ -151,15 +151,27 @@ export default function Bulletin() {
       setSubStatus("invalid");
       return;
     }
-    const { error } = await supabase.from("subscribers").insert({ email: email.trim().toLowerCase() });
-    if (error) {
-      // unique constraint violation = already subscribed
-      if (error.code === "23505") setSubStatus("duplicate");
-      else setSubStatus("error");
-      return;
+    try {
+      const res = await fetch("/api/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setSubStatus(data.error === "invalid" ? "invalid" : "error");
+        return;
+      }
+      if (data.duplicate) {
+        setSubStatus("duplicate");
+        return;
+      }
+      setSubStatus("success");
+      setEmail("");
+    } catch (err) {
+      setSubStatus("error");
     }
-    setSubStatus("success");
-    setEmail("");
   }
 
   const monthLabel = new Date(cursor.year, cursor.month, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
