@@ -87,18 +87,33 @@ export async function GET(request) {
   // In practice these are often the same ID from the same Audience in your
   // dashboard, but Resend has been evolving this naming. Passing both here
   // as a safe bet — if the API rejects one as an unrecognized field, drop it.
-  const { data, error } = await resend.broadcasts.create({
+  const { data: broadcast, error: createError } = await resend.broadcasts.create({
     audienceId: process.env.RESEND_AUDIENCE_ID,
     segmentId: process.env.RESEND_AUDIENCE_ID,
     from: process.env.RESEND_FROM_EMAIL,
     subject,
     react: emailElement,
-    send: true,
   });
 
-  if (error) {
-    return Response.json({ error: error.message }, { status: 500 });
+  if (createError) {
+    return Response.json({ error: createError.message }, { status: 500 });
   }
 
-  return Response.json({ mode: "broadcast", eventCount: (events || []).length, broadcastId: data?.id });
+  // Explicit second call to actually send it, rather than relying on the
+  // create call's own send:true flag — that flag didn't reliably fire a
+  // real send in testing, so this is the more dependable two-step version.
+  const { error: sendError } = await resend.broadcasts.send(broadcast.id);
+
+  if (sendError) {
+    return Response.json(
+      {
+        error: `Broadcast was created but sending failed: ${sendError.message}`,
+        broadcastId: broadcast.id,
+        note: "The draft exists in Resend's dashboard — you can send it manually from there as a fallback.",
+      },
+      { status: 500 }
+    );
+  }
+
+  return Response.json({ mode: "broadcast", eventCount: (events || []).length, broadcastId: broadcast.id });
 }
