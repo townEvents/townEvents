@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "../lib/supabaseClient";
+import { todayStrEastern, addDaysToDateStr, daysBetween } from "../lib/dates";
 
 const CATS = {
   Music: "#9A3324",
@@ -11,11 +12,6 @@ const CATS = {
   "Sports & Rec": "#B5651D",
   "Arts & Culture": "#6B4E71",
   Other: "#6B5D4F",
-};
-
-const todayStr = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
 function hashRotation(id) {
@@ -31,19 +27,20 @@ function formatHeaderDate(dateStr) {
   return dt.toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" });
 }
 
-function inRange(dateStr, range) {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const [y, m, d] = dateStr.split("-").map(Number);
-  const dt = new Date(y, m - 1, d);
-  if (range === "today") return dt.getTime() === now.getTime();
+// today: Eastern-pinned YYYY-MM-DD string, so "today" always means today
+// in Rutherford, regardless of the visitor's own device timezone.
+function inRange(dateStr, range, today) {
+  if (range === "today") return dateStr === today;
   if (range === "week") {
-    const end = new Date(now);
-    end.setDate(end.getDate() + 7);
-    return dt >= now && dt <= end;
+    const diff = daysBetween(today, dateStr);
+    return diff >= 0 && diff <= 7;
   }
-  if (range === "month") return dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth();
-  return dt >= now;
+  if (range === "month") {
+    const [ty, tm] = today.split("-");
+    const [ey, em] = dateStr.split("-");
+    return ty === ey && tm === em;
+  }
+  return daysBetween(today, dateStr) >= 0;
 }
 
 function monthGrid(year, month) {
@@ -61,6 +58,8 @@ function isValidEmail(v) {
 }
 
 export default function Bulletin() {
+  const today = todayStrEastern();
+
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -69,8 +68,8 @@ export default function Bulletin() {
   const [range, setRange] = useState("week");
   const [view, setView] = useState("list");
   const [cursor, setCursor] = useState(() => {
-    const d = new Date();
-    return { year: d.getFullYear(), month: d.getMonth() };
+    const [y, m] = today.split("-");
+    return { year: Number(y), month: Number(m) - 1 };
   });
   const [selectedDay, setSelectedDay] = useState(null);
 
@@ -135,11 +134,8 @@ export default function Bulletin() {
         if (activeTowns.size > 0 && !activeTowns.has(e.town)) return false;
         if (view === "list") {
           if (range === "all") {
-            const now = new Date();
-            now.setHours(0, 0, 0, 0);
-            const [y, m, d] = e.date.split("-").map(Number);
-            if (new Date(y, m - 1, d) < now) return false;
-          } else if (!inRange(e.date, range)) return false;
+            if (daysBetween(today, e.date) < 0) return false;
+          } else if (!inRange(e.date, range, today)) return false;
         }
         if (search.trim()) {
           const q = search.toLowerCase();
@@ -149,7 +145,7 @@ export default function Bulletin() {
         return true;
       })
       .sort((a, b) => (a.date + (a.time || "")).localeCompare(b.date + (b.time || "")));
-  }, [events, activeTowns, range, search, view]);
+  }, [events, activeTowns, range, search, view, today]);
 
   const grouped = useMemo(() => {
     const map = new Map();
@@ -408,7 +404,7 @@ export default function Bulletin() {
               <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
                 {monthCells.map((date, i) => {
                   const count = date ? monthCounts[date] || 0 : 0;
-                  const isToday = date === todayStr();
+                  const isToday = date === today;
                   return (
                     <button
                       key={i}
