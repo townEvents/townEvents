@@ -1,15 +1,13 @@
 import { Resend } from "resend";
 import { getSupabaseAdmin } from "../../../../lib/supabaseAdmin";
 import WeeklyDigest from "../../../../emails/WeeklyDigest";
+import { todayStrEastern, addDaysToDateStr } from "../../../../lib/dates";
 
 export const maxDuration = 60;
 
-function toDateStr(d) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-function formatShort(d) {
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+function formatShort(dateStr) {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 }
 
 export async function GET(request) {
@@ -28,11 +26,8 @@ export async function GET(request) {
     return Response.json({ error: err.message }, { status: 500 });
   }
 
-  const start = new Date();
-  const end = new Date();
-  end.setDate(end.getDate() + 6); // Monday through Sunday
-  const startStr = toDateStr(start);
-  const endStr = toDateStr(end);
+  const startStr = todayStrEastern();
+  const endStr = addDaysToDateStr(startStr, 6); // Monday through Sunday
 
   const { data: events, error: fetchError } = await supabaseAdmin
     .from("events")
@@ -55,7 +50,7 @@ export async function GET(request) {
   [...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0])).forEach((entry) => grouped.push(entry));
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.rutherfordbulletin.com";
-  const subject = `This week in Rutherford - ${formatShort(start)}–${formatShort(end)}`;
+  const subject = `This week in Rutherford - ${formatShort(startStr)}–${formatShort(endStr)}`;
 
   if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
     return Response.json({ error: "Missing RESEND_API_KEY or RESEND_FROM_EMAIL" }, { status: 500 });

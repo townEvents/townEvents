@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getSupabaseAdmin } from "../../../../lib/supabaseAdmin";
+import { todayStrEastern } from "../../../../lib/dates";
 
 // Give the job room to run — web search + reading results takes longer
 // than a typical API route. Vercel's Hobby plan currently allows function
@@ -68,7 +69,7 @@ export async function GET(request) {
   }
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = todayStrEastern();
 
   const prompt = `You are researching community events for a local town bulletin.
 Search the web for real, upcoming public events happening in the next 30 days
