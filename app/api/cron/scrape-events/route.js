@@ -88,6 +88,16 @@ Search specifically for content from these two pages (e.g. a query like
 "rutherfordboronj.com calendar events" or "rutherfordboronj.com news"), not
 just Rutherford in general, to make sure these specific sources get covered.
 
+RECURRING EVENTS: some things you find won't be a single one-off date -
+a farmers market every Wednesday and Saturday for a season, a weekly
+storytime, a monthly meeting on a fixed schedule. For these, create a
+SEPARATE entry in the JSON array for each individual occurrence date that
+falls within this search window - don't summarize a recurring schedule as
+one vague entry. For example, a market running "every Wed & Sat, July
+through October" should produce one entry per Wednesday and one per
+Saturday that falls within the next 30 days, each with its own correct
+"date", all sharing the same title/description/location/category.
+
 Also check other sources like each town's official website, public
 libraries, recreation departments, chambers of commerce, school district and
 PTA pages, churches and civic organizations, Patch.com town pages, and public
