@@ -84,9 +84,26 @@ general search, since Rutherford is this bulletin's main town:
   Borough's government news page. Include any events, public meetings, or
   sign-up opportunities (registrations, deadlines, civic participation)
   announced there.
-Search specifically for content from these two pages (e.g. a query like
-"rutherfordboronj.com calendar events" or "rutherfordboronj.com news"), not
-just Rutherford in general, to make sure these specific sources get covered.
+- ${"https://www.rutherfordboronj.com/resident/farmers-market"} —
+  Rutherford's farmers market page. This runs on a recurring weekly
+  schedule (e.g. Wednesdays and Saturdays across a season) rather than a
+  single date - find its current schedule and days of operation, then
+  follow the RECURRING EVENTS instructions below to generate one entry
+  per market day that falls in the search window.
+- ${"https://www.instagram.com/rutherfordartscouncil_nj/"} — the
+  Rutherford Arts Council's Instagram (a public account). Search for
+  recent posts or announcements from this account about events (this one
+  is likely to be harder to find via search than the borough's own
+  website, since Instagram limits what's publicly searchable regardless
+  of the account being public - include anything you can find, but don't
+  worry if this one comes up empty some runs).
+- ${"https://rutherfordartscouncil.org/"} — the Rutherford Arts Council's
+  own website. Check for an events or calendar page and include anything
+  listed there (this is likely to search better than their Instagram).
+Search specifically for content from these pages (e.g. a query like
+"rutherfordboronj.com calendar events" or "rutherfordboronj.com farmers
+market"), not just Rutherford in general, to make sure these specific
+sources get covered.
 
 RECURRING EVENTS: some things you find won't be a single one-off date -
 a farmers market every Wednesday and Saturday for a season, a weekly
