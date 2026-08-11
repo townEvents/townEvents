@@ -75,13 +75,33 @@ export async function GET(request) {
 Search the web for real, upcoming public events happening in the next 30 days
 (starting ${todayStr}) in these New Jersey towns: ${TOWNS.join(", ")}.
 
-Check sources like each town's official website and events calendar, public
+PRIORITY SOURCES — check these specifically, every run, in addition to
+general search, since Rutherford is this bulletin's main town:
+- ${"https://www.rutherfordboronj.com/resident/calendar"} — Rutherford
+  Borough's official events calendar. Pull in every event listed there
+  that falls in the search window.
+- ${"https://www.rutherfordboronj.com/government/news/"} — Rutherford
+  Borough's government news page. Include any events, public meetings, or
+  sign-up opportunities (registrations, deadlines, civic participation)
+  announced there.
+Search specifically for content from these two pages (e.g. a query like
+"rutherfordboronj.com calendar events" or "rutherfordboronj.com news"), not
+just Rutherford in general, to make sure these specific sources get covered.
+
+Also check other sources like each town's official website, public
 libraries, recreation departments, chambers of commerce, school district and
 PTA pages, churches and civic organizations, Patch.com town pages, and public
 event listings (Facebook, Eventbrite, etc). Include things like farmers
 markets, town council or board meetings, concerts, kids' programs, sports
-leagues, and community fairs. Skip anything private or not open to the
-public.
+leagues, community fairs, and anything residents might want to sign up for.
+Skip anything private or not open to the public.
+
+Beyond the towns listed above, also include larger public fairs, festivals,
+and community events happening anywhere in the broader Meadowlands region
+of NJ (e.g. Meadowlands-area fairs, public events at MetLife Stadium or the
+American Dream complex, county-level Meadowlands events) even if they're in
+a nearby town not in the main list — use the event's actual town/venue name
+in the "town" field for these.
 
 This is a general community bulletin. Adult-audience events are completely
 fine to include — bars, breweries, wine tastings, 21+ nights, comedy shows,
@@ -99,7 +119,9 @@ objects with exactly these fields:
 - "description": one or two plain sentences
 - "date": "YYYY-MM-DD"
 - "time": string like "7:00 PM", or "" if unknown
-- "town": one of ${TOWNS.map((t) => `"${t}"`).join(", ")}
+- "town": one of ${TOWNS.map((t) => `"${t}"`).join(", ")} — or, for a
+  broader Meadowlands-area event as described above, the actual town or
+  venue name (e.g. "Secaucus", "MetLife Stadium")
 - "location": venue name/address, or "" if unknown
 - "category": one of ${CATEGORIES.map((c) => `"${c}"`).join(", ")}
 - "status": "approved" normally, or "cancelled" if you found explicit
