@@ -148,6 +148,15 @@ export async function GET(request) {
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const todayStr = todayStrEastern();
+  const runStartedAt = new Date().toISOString();
+
+  const result = {
+    found: 0, inserted: 0, cancelled: 0, enriched: 0, skipped: 0, filtered: 0,
+    errors: [], batchErrors: [], feedsFetched: 0, feedsFailed: 0,
+  };
+  let fatalError = null;
+
+  try {
   const schema = SCHEMA_INSTRUCTIONS(todayStr);
 
   const priorityPrompt = `You are researching community events for a local town bulletin.
@@ -241,7 +250,7 @@ ${schema}`
     .gte("date", todayStr);
 
   if (fetchError) {
-    return Response.json({ error: fetchError.message }, { status: 500 });
+    throw new Error(`Failed to fetch existing events: ${fetchError.message}`);
   }
 
   // Mutable working copy — grows as we insert, so duplicates found later
@@ -331,16 +340,46 @@ ${schema}`
     }
   }
 
-  return Response.json({
-    found: allCandidates.length,
-    inserted,
-    cancelled,
-    enriched,
-    skipped,
-    filtered,
-    errors,
-    batchErrors,
-    feedsFetched,
-    feedsFailed,
-  });
+  result.found = allCandidates.length;
+  result.inserted = inserted;
+  result.cancelled = cancelled;
+  result.enriched = enriched;
+  result.skipped = skipped;
+  result.filtered = filtered;
+  result.errors = errors;
+  result.batchErrors = batchErrors;
+  result.feedsFetched = feedsFetched;
+  result.feedsFailed = feedsFailed;
+  } catch (err) {
+    fatalError = err.message;
+  } finally {
+    // Always write a log row, success or failure, so you can confirm the
+    // job actually ran even on a run that finds nothing new.
+    try {
+      await supabaseAdmin.from("scrape_runs").insert({
+        run_at: runStartedAt,
+        success: !fatalError,
+        fatal_error: fatalError,
+        found: result.found,
+        inserted: result.inserted,
+        cancelled: result.cancelled,
+        enriched: result.enriched,
+        skipped: result.skipped,
+        filtered: result.filtered,
+        error_count: result.errors.length,
+        batch_errors: result.batchErrors,
+        feeds_fetched: result.feedsFetched,
+        feeds_failed: result.feedsFailed,
+      });
+    } catch (logErr) {
+      // If even the log write fails, there's nothing more we can do here -
+      // don't let a logging problem mask the real result.
+    }
+  }
+
+  if (fatalError) {
+    return Response.json({ error: fatalError }, { status: 500 });
+  }
+
+  return Response.json(result);
 }
