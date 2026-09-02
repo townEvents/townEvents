@@ -2,11 +2,11 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getSupabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { todayStrEastern } from "../../../../lib/dates";
 
-// Give the job room to run — web search + reading results takes longer
-// than a typical API route. Vercel's Hobby plan currently allows function
-// durations well into this range; check Vercel's current docs if you see
-// timeouts and need to raise or lower this.
-export const maxDuration = 120;
+// Give the job room to run - web search across multiple priority sources
+// plus general search takes a while. 300 seconds is the current ceiling
+// on Vercel's Hobby plan (via Fluid Compute); check Vercel's docs if this
+// number changes or you're on a different plan.
+export const maxDuration = 300;
 
 const TOWNS = ["Rutherford", "East Rutherford", "Carlstadt", "Lyndhurst", "North Arlington", "Wallington"];
 const CATEGORIES = ["Music", "Market", "Kids & Family", "Meeting / Civic", "Sports & Rec", "Arts & Culture", "Other"];
@@ -49,13 +49,6 @@ function titlesLikelySame(a, b) {
 export async function GET(request) {
   const authHeader = request.headers.get("authorization");
   const configuredSecret = process.env.CRON_SECRET;
-
-  // TEMPORARY DEBUG LOGGING — remove once auth is confirmed working.
-  // Doesn't log the full secret, just enough to diagnose a mismatch.
-  console.log("[cron debug] CRON_SECRET is set:", Boolean(configuredSecret));
-  console.log("[cron debug] CRON_SECRET length:", configuredSecret ? configuredSecret.length : 0);
-  console.log("[cron debug] CRON_SECRET first 3 chars:", configuredSecret ? configuredSecret.slice(0, 3) : "n/a");
-  console.log("[cron debug] Authorization header received:", authHeader ? `${authHeader.slice(0, 10)}...` : "none");
 
   if (!configuredSecret || authHeader !== `Bearer ${configuredSecret}`) {
     return new Response("Unauthorized", { status: 401 });
