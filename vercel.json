@@ -2,7 +2,11 @@
   "crons": [
     {
       "path": "/api/cron/scrape-events",
-      "schedule": "0 7 * * 1"
+      "schedule": "0 0 * * 1"
+    },
+    {
+      "path": "/api/cron/scrape-events",
+      "schedule": "0 9 * * 3"
     },
     {
       "path": "/api/cron/send-weekly-email",
