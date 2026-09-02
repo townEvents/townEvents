@@ -39,15 +39,33 @@ function normalize(str) {
 
 // Simple word-overlap similarity — good enough to catch "Farmers Market"
 // vs "Rutherford Farmers Market" without needing a real fuzzy-match library.
-function titlesLikelySame(a, b) {
+function wordOverlapRatio(a, b) {
   const wa = new Set(normalize(a).split(" ").filter(Boolean));
   const wb = new Set(normalize(b).split(" ").filter(Boolean));
-  if (wa.size === 0 || wb.size === 0) return false;
+  if (wa.size === 0 || wb.size === 0) return 0;
   let shared = 0;
   wa.forEach((w) => {
     if (wb.has(w)) shared++;
   });
-  return shared / Math.min(wa.size, wb.size) >= 0.6;
+  return shared / Math.min(wa.size, wb.size);
+}
+
+// A recurring listing (e.g. a weekly farmers market) found by two different
+// search batches often ends up with two quite different titles - e.g.
+// "Rutherford Farmers' Market (Wednesday)" vs "Farmers Market at Lincoln
+// Park" - whose word overlap falls short of the 0.6 bar below on its own.
+// A shared address is strong independent evidence they're the same event,
+// so it's allowed to lower the bar - but only alongside *some* title
+// overlap, so two unrelated events that happen to share a generic venue
+// (e.g. two different library programs in the same meeting room) don't
+// get merged just because the room matches.
+function likelySameEvent(existing, candidate) {
+  const titleRatio = wordOverlapRatio(existing.title, candidate.title);
+  if (titleRatio >= 0.6) return true;
+  if (titleRatio >= 0.3 && existing.location && candidate.location) {
+    return wordOverlapRatio(existing.location, candidate.location) >= 0.5;
+  }
+  return false;
 }
 
 // Sources sometimes report a specific venue's town as the venue name itself
@@ -320,7 +338,7 @@ ${schema}`
     }
 
     const match = existing.find(
-      (e) => normalizedTown(e.town) === normalizedTown(c.town) && e.date === c.date && titlesLikelySame(e.title, c.title)
+      (e) => normalizedTown(e.town) === normalizedTown(c.town) && e.date === c.date && likelySameEvent(e, c)
     );
 
     if (match) {
