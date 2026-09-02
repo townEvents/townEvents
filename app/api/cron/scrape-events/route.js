@@ -156,6 +156,22 @@ export async function GET(request) {
   };
   let fatalError = null;
 
+  // Log the run starting immediately, before any real work - if this run
+  // later gets hard-killed by a timeout (rather than a normal JS error),
+  // this row is what proves the job at least started, and stays stuck on
+  // "running" as a signal that it never finished.
+  let logRowId = null;
+  try {
+    const { data: startRow } = await supabaseAdmin
+      .from("scrape_runs")
+      .insert({ run_at: runStartedAt, status: "running" })
+      .select()
+      .single();
+    logRowId = startRow?.id || null;
+  } catch (err) {
+    // If even this fails, proceed without a log row rather than blocking the run.
+  }
+
   try {
   const schema = SCHEMA_INSTRUCTIONS(todayStr);
 
@@ -353,12 +369,12 @@ ${schema}`
   } catch (err) {
     fatalError = err.message;
   } finally {
-    // Always write a log row, success or failure, so you can confirm the
-    // job actually ran even on a run that finds nothing new.
+    // Update the row from the start of this run with the final outcome.
+    // Falls back to inserting fresh if that start-of-run write never
+    // happened (rare - only if the very first log write itself failed).
     try {
-      await supabaseAdmin.from("scrape_runs").insert({
-        run_at: runStartedAt,
-        success: !fatalError,
+      const payload = {
+        status: fatalError ? "error" : "success",
         fatal_error: fatalError,
         found: result.found,
         inserted: result.inserted,
@@ -370,7 +386,12 @@ ${schema}`
         batch_errors: result.batchErrors,
         feeds_fetched: result.feedsFetched,
         feeds_failed: result.feedsFailed,
-      });
+      };
+      if (logRowId) {
+        await supabaseAdmin.from("scrape_runs").update(payload).eq("id", logRowId);
+      } else {
+        await supabaseAdmin.from("scrape_runs").insert({ run_at: runStartedAt, ...payload });
+      }
     } catch (logErr) {
       // If even the log write fails, there's nothing more we can do here -
       // don't let a logging problem mask the real result.
