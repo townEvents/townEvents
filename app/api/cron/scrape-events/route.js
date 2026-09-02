@@ -2,10 +2,10 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getSupabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { todayStrEastern } from "../../../../lib/dates";
 
-// Give the job room to run - web search across multiple priority sources
-// plus general search takes a while. 300 seconds is the current ceiling
-// on Vercel's Hobby plan (via Fluid Compute); check Vercel's docs if this
-// number changes or you're on a different plan.
+// Give the job room to run - even split into smaller batches, this does
+// real web search work. 300 seconds is the current ceiling on Vercel's
+// Hobby plan (via Fluid Compute); check Vercel's docs if this number
+// changes or you're on a different plan.
 export const maxDuration = 300;
 
 const TOWNS = ["Rutherford", "East Rutherford", "Carlstadt", "Lyndhurst", "North Arlington", "Wallington"];
@@ -46,6 +46,69 @@ function titlesLikelySame(a, b) {
   return shared / Math.min(wa.size, wb.size) >= 0.6;
 }
 
+const SCHEMA_INSTRUCTIONS = (todayStr) => `
+Respond with ONLY a JSON array (no other text, no markdown code fences) of
+objects with exactly these fields:
+- "title": string
+- "description": one or two plain sentences
+- "date": "YYYY-MM-DD"
+- "time": string like "7:00 PM", or "" if unknown
+- "town": the town or venue name (e.g. "Rutherford", "Secaucus", "MetLife Stadium")
+- "location": venue name/address, or "" if unknown
+- "category": one of ${CATEGORIES.map((c) => `"${c}"`).join(", ")}
+- "status": "approved" normally, or "cancelled" if you found explicit
+  evidence it was cancelled or postponed
+- "source_url": the URL where you found this event
+
+RECURRING EVENTS: some things you find won't be a single one-off date -
+a farmers market every Wednesday and Saturday for a season, a weekly
+storytime, a monthly meeting on a fixed schedule. For these, create a
+SEPARATE entry in the array for each individual occurrence date that falls
+within the next 30 days from ${todayStr} - don't summarize a recurring
+schedule as one vague entry.
+
+This is a general community bulletin. Adult-audience events are completely
+fine to include — bars, breweries, wine tastings, 21+ nights, comedy shows,
+and similar are all normal community events, include them. The only thing
+to exclude is events centered on sexual or explicit adult content. Skip
+anything private or not open to the public.
+
+If you find no qualifying events, respond with exactly: []`;
+
+// Runs one focused search. Never throws - on any failure (API error,
+// unparseable response), returns an empty candidate list plus error info,
+// so one bad batch doesn't take down the other batches running alongside it.
+async function runSearchBatch(anthropic, label, promptBody, maxTokens) {
+  try {
+    const response = await anthropic.messages.create({
+      model: "claude-sonnet-5",
+      max_tokens: maxTokens,
+      messages: [{ role: "user", content: promptBody }],
+      tools: [{ type: "web_search_20250305", name: "web_search" }],
+    });
+
+    const rawText = response.content
+      .filter((b) => b.type === "text")
+      .map((b) => b.text)
+      .join("\n")
+      .replace(/```json|```/g, "")
+      .trim();
+
+    const firstBracket = rawText.indexOf("[");
+    const lastBracket = rawText.lastIndexOf("]");
+    const text = firstBracket !== -1 && lastBracket !== -1 ? rawText.slice(firstBracket, lastBracket + 1) : rawText;
+
+    const candidates = JSON.parse(text);
+    return { label, candidates, error: null };
+  } catch (err) {
+    return {
+      label,
+      candidates: [],
+      error: { message: err.message, raw: (err.rawText || "").slice(0, 1000) },
+    };
+  }
+}
+
 export async function GET(request) {
   const authHeader = request.headers.get("authorization");
   const configuredSecret = process.env.CRON_SECRET;
@@ -63,135 +126,66 @@ export async function GET(request) {
 
   const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const todayStr = todayStrEastern();
+  const schema = SCHEMA_INSTRUCTIONS(todayStr);
 
-  const prompt = `You are researching community events for a local town bulletin.
-Search the web for real, upcoming public events happening in the next 30 days
-(starting ${todayStr}) in these New Jersey towns: ${TOWNS.join(", ")}.
+  const priorityPrompt = `You are researching community events for a local town bulletin.
+Rutherford, NJ is this bulletin's main town. Check these specific sources
+and pull in every event that falls in the next 30 days from ${todayStr}:
 
-PRIORITY SOURCES — check these specifically, every run, in addition to
-general search, since Rutherford is this bulletin's main town:
 - ${"https://www.rutherfordboronj.com/resident/calendar"} — Rutherford
-  Borough's official events calendar. Pull in every event listed there
-  that falls in the search window.
+  Borough's official events calendar.
 - ${"https://www.rutherfordboronj.com/government/news/"} — Rutherford
-  Borough's government news page. Include any events, public meetings, or
-  sign-up opportunities (registrations, deadlines, civic participation)
-  announced there.
+  Borough's government news page. Include events, public meetings, or
+  sign-up opportunities (registrations, deadlines, civic participation).
 - ${"https://www.rutherfordboronj.com/resident/farmers-market"} —
-  Rutherford's farmers market page. This runs on a recurring weekly
-  schedule (e.g. Wednesdays and Saturdays across a season) rather than a
-  single date - find its current schedule and days of operation, then
-  follow the RECURRING EVENTS instructions below to generate one entry
-  per market day that falls in the search window.
+  Rutherford's farmers market page. Find its current recurring schedule
+  (e.g. Wednesdays and Saturdays) and follow the RECURRING EVENTS
+  instructions below to list each individual market day in the window.
 - ${"https://www.instagram.com/rutherfordartscouncil_nj/"} — the
-  Rutherford Arts Council's Instagram (a public account). Search for
-  recent posts or announcements from this account about events (this one
-  is likely to be harder to find via search than the borough's own
-  website, since Instagram limits what's publicly searchable regardless
-  of the account being public - include anything you can find, but don't
-  worry if this one comes up empty some runs).
+  Rutherford Arts Council's Instagram (public account, but Instagram
+  limits what's searchable — include anything found, don't worry if empty).
 - ${"https://rutherfordartscouncil.org/"} — the Rutherford Arts Council's
-  own website. Check for an events or calendar page and include anything
-  listed there (this is likely to search better than their Instagram).
-Search specifically for content from these pages (e.g. a query like
-"rutherfordboronj.com calendar events" or "rutherfordboronj.com farmers
-market"), not just Rutherford in general, to make sure these specific
-sources get covered.
+  own website — check for an events/calendar page.
 
-RECURRING EVENTS: some things you find won't be a single one-off date -
-a farmers market every Wednesday and Saturday for a season, a weekly
-storytime, a monthly meeting on a fixed schedule. For these, create a
-SEPARATE entry in the JSON array for each individual occurrence date that
-falls within this search window - don't summarize a recurring schedule as
-one vague entry. For example, a market running "every Wed & Sat, July
-through October" should produce one entry per Wednesday and one per
-Saturday that falls within the next 30 days, each with its own correct
-"date", all sharing the same title/description/location/category.
+Search specifically for content from these pages (e.g. "rutherfordboronj.com
+calendar events", "rutherfordboronj.com farmers market"), not just
+Rutherford in general, to make sure these specific sources get covered.
+${schema}`;
 
-Also check other sources like each town's official website, public
-libraries, recreation departments, chambers of commerce, school district and
-PTA pages, churches and civic organizations, Patch.com town pages, and public
-event listings (Facebook, Eventbrite, etc). Include things like farmers
-markets, town council or board meetings, concerts, kids' programs, sports
-leagues, community fairs, and anything residents might want to sign up for.
-Skip anything private or not open to the public.
+  const generalPrompt = `You are researching community events for a local town bulletin.
+Search the web for real, upcoming public events happening in the next 30 days
+from ${todayStr} in these New Jersey towns: ${TOWNS.join(", ")}.
 
-Beyond the towns listed above, also include larger public fairs, festivals,
+Check sources like each town's official website, public libraries,
+recreation departments, chambers of commerce, school district and PTA
+pages, churches and civic organizations, Patch.com town pages, and public
+event listings (Facebook, Eventbrite, etc). Include farmers markets, town
+council or board meetings, concerts, kids' programs, sports leagues,
+community fairs, and anything residents might want to sign up for.
+${schema}`;
+
+  const meadowlandsPrompt = `You are researching community events for a local town bulletin
+covering Rutherford, NJ and nearby towns (${TOWNS.join(", ")}).
+
+Beyond those specific towns, search for larger public fairs, festivals,
 and community events happening anywhere in the broader Meadowlands region
-of NJ (e.g. Meadowlands-area fairs, public events at MetLife Stadium or the
-American Dream complex, county-level Meadowlands events) even if they're in
-a nearby town not in the main list — use the event's actual town/venue name
-in the "town" field for these.
+of NJ in the next 30 days from ${todayStr} — e.g. Meadowlands-area fairs,
+public events at MetLife Stadium or the American Dream complex, county-level
+Meadowlands events. Use the event's actual town or venue name in the "town"
+field (e.g. "Secaucus", "MetLife Stadium").
+${schema}`;
 
-This is a general community bulletin. Adult-audience events are completely
-fine to include — bars, breweries, wine tastings, 21+ nights, comedy shows,
-and similar are all normal community events, include them. The only thing
-to exclude is events centered on sexual or explicit adult content — for
-example, adult film screenings/expos, strip club or burlesque events, or
-similar. Everything else stays in, regardless of the audience it's aimed at.
+  const [priorityResult, generalResult, meadowlandsResult] = await Promise.all([
+    runSearchBatch(anthropic, "priority-sources", priorityPrompt, 10000),
+    runSearchBatch(anthropic, "general-towns", generalPrompt, 8000),
+    runSearchBatch(anthropic, "meadowlands", meadowlandsPrompt, 6000),
+  ]);
 
-Also note if any event — including a normally recurring one — has been
-explicitly reported as cancelled or postponed.
+  const batches = [priorityResult, generalResult, meadowlandsResult];
+  const allCandidates = batches.flatMap((b) => b.candidates);
+  const batchErrors = batches.filter((b) => b.error).map((b) => ({ batch: b.label, ...b.error }));
 
-Respond with ONLY a JSON array (no other text, no markdown code fences) of
-objects with exactly these fields:
-- "title": string
-- "description": one or two plain sentences
-- "date": "YYYY-MM-DD"
-- "time": string like "7:00 PM", or "" if unknown
-- "town": one of ${TOWNS.map((t) => `"${t}"`).join(", ")} — or, for a
-  broader Meadowlands-area event as described above, the actual town or
-  venue name (e.g. "Secaucus", "MetLife Stadium")
-- "location": venue name/address, or "" if unknown
-- "category": one of ${CATEGORIES.map((c) => `"${c}"`).join(", ")}
-- "status": "approved" normally, or "cancelled" if you found explicit
-  evidence it was cancelled or postponed
-- "source_url": the URL where you found this event
-
-If you find no qualifying events, respond with exactly: []`;
-
-  let response;
-  try {
-    response = await anthropic.messages.create({
-      model: "claude-sonnet-5",
-      max_tokens: 16000,
-      messages: [{ role: "user", content: prompt }],
-      tools: [{ type: "web_search_20250305", name: "web_search" }],
-    });
-  } catch (err) {
-    return Response.json({ error: `Anthropic API call failed: ${err.message}` }, { status: 500 });
-  }
-
-  const rawText = response.content
-    .filter((b) => b.type === "text")
-    .map((b) => b.text)
-    .join("\n")
-    .replace(/```json|```/g, "")
-    .trim();
-
-  // Be tolerant of the model adding any stray text before/after the array
-  // despite instructions not to - pull out just the [ ... ] portion.
-  const firstBracket = rawText.indexOf("[");
-  const lastBracket = rawText.lastIndexOf("]");
-  const text = firstBracket !== -1 && lastBracket !== -1 ? rawText.slice(firstBracket, lastBracket + 1) : rawText;
-
-  let candidates;
-  try {
-    candidates = JSON.parse(text);
-  } catch (err) {
-    return Response.json(
-      {
-        error: "Could not parse model output as JSON",
-        parseErrorMessage: err.message,
-        rawLength: rawText.length,
-        stopReason: response.stop_reason,
-        raw: rawText.slice(0, 4000),
-      },
-      { status: 500 }
-    );
-  }
-
-  const { data: existing, error: fetchError } = await supabaseAdmin
+  const { data: existingRows, error: fetchError } = await supabaseAdmin
     .from("events")
     .select("id, title, date, town, status, time, description, location, category, source_url, source")
     .gte("date", todayStr);
@@ -200,6 +194,11 @@ If you find no qualifying events, respond with exactly: []`;
     return Response.json({ error: fetchError.message }, { status: 500 });
   }
 
+  // Mutable working copy — grows as we insert, so duplicates found later
+  // in this same run (whether from the same batch or a different one) get
+  // correctly recognized instead of inserted twice.
+  const existing = [...(existingRows || [])];
+
   let inserted = 0;
   let cancelled = 0;
   let enriched = 0;
@@ -207,7 +206,7 @@ If you find no qualifying events, respond with exactly: []`;
   let filtered = 0;
   const errors = [];
 
-  for (const c of candidates) {
+  for (const c of allCandidates) {
     if (!c.title || !c.date || !c.town) {
       skipped++;
       continue;
@@ -218,24 +217,17 @@ If you find no qualifying events, respond with exactly: []`;
       continue;
     }
 
-    const match = (existing || []).find(
+    const match = existing.find(
       (e) => e.town === c.town && e.date === c.date && titlesLikelySame(e.title, c.title)
     );
 
     if (match) {
       const patch = {};
 
-      // Cancellation takes priority and overrides other fields below.
       if (c.status === "cancelled" && match.status !== "cancelled") {
         patch.status = "cancelled";
       }
 
-      // Fill in / correct fields on matched events. AI-found events can be
-      // fully overwritten if a later pass finds different info (e.g. a
-      // time that changes from 7pm to 8pm) — that's the AI correcting
-      // itself. Manually-added events (Table Editor or the /add form) are
-      // only ever filled in where blank, never overwritten, so a human's
-      // entry can't get silently replaced by a possibly-wrong AI guess.
       const protectExisting = match.source === "manual";
       const fillable = ["time", "description", "location", "category", "source_url"];
       for (const field of fillable) {
@@ -253,10 +245,10 @@ If you find no qualifying events, respond with exactly: []`;
         const { error } = await supabaseAdmin.from("events").update(patch).eq("id", match.id);
         if (error) {
           errors.push(error.message);
-        } else if (patch.status === "cancelled") {
-          cancelled++;
         } else {
-          enriched++;
+          Object.assign(match, patch); // keep our in-memory copy in sync too
+          if (patch.status === "cancelled") cancelled++;
+          else enriched++;
         }
       } else {
         skipped++;
@@ -264,33 +256,39 @@ If you find no qualifying events, respond with exactly: []`;
       continue;
     }
 
-    // Brand new event — publishes immediately. (Earlier versions held new
-    // AI-found events as "pending" for a human glance first; that's been
-    // turned off for now. To bring it back later, change "approved" below
-    // to "pending" and filter it out on the public site again.)
-    const { error } = await supabaseAdmin.from("events").insert({
-      title: c.title,
-      description: c.description || "",
-      date: c.date,
-      time: c.time || "",
-      town: c.town,
-      location: c.location || "",
-      category: CATEGORIES.includes(c.category) ? c.category : "Other",
-      status: c.status === "cancelled" ? "cancelled" : "approved",
-      source: "ai",
-      source_url: c.source_url || null,
-    });
-    if (error) errors.push(error.message);
-    else inserted++;
+    const { data: insertedRow, error } = await supabaseAdmin
+      .from("events")
+      .insert({
+        title: c.title,
+        description: c.description || "",
+        date: c.date,
+        time: c.time || "",
+        town: c.town,
+        location: c.location || "",
+        category: CATEGORIES.includes(c.category) ? c.category : "Other",
+        status: c.status === "cancelled" ? "cancelled" : "approved",
+        source: "ai",
+        source_url: c.source_url || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      errors.push(error.message);
+    } else {
+      inserted++;
+      existing.push(insertedRow); // so later duplicates in this same run get caught
+    }
   }
 
   return Response.json({
-    found: candidates.length,
+    found: allCandidates.length,
     inserted,
     cancelled,
     enriched,
     skipped,
     filtered,
     errors,
+    batchErrors,
   });
 }
