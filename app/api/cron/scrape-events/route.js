@@ -154,7 +154,7 @@ If you find no qualifying events, respond with exactly: []`;
   try {
     response = await anthropic.messages.create({
       model: "claude-sonnet-5",
-      max_tokens: 8000,
+      max_tokens: 16000,
       messages: [{ role: "user", content: prompt }],
       tools: [{ type: "web_search_20250305", name: "web_search" }],
     });
@@ -162,18 +162,33 @@ If you find no qualifying events, respond with exactly: []`;
     return Response.json({ error: `Anthropic API call failed: ${err.message}` }, { status: 500 });
   }
 
-  const text = response.content
+  const rawText = response.content
     .filter((b) => b.type === "text")
     .map((b) => b.text)
     .join("\n")
     .replace(/```json|```/g, "")
     .trim();
 
+  // Be tolerant of the model adding any stray text before/after the array
+  // despite instructions not to - pull out just the [ ... ] portion.
+  const firstBracket = rawText.indexOf("[");
+  const lastBracket = rawText.lastIndexOf("]");
+  const text = firstBracket !== -1 && lastBracket !== -1 ? rawText.slice(firstBracket, lastBracket + 1) : rawText;
+
   let candidates;
   try {
     candidates = JSON.parse(text);
   } catch (err) {
-    return Response.json({ error: "Could not parse model output as JSON", raw: text.slice(0, 2000) }, { status: 500 });
+    return Response.json(
+      {
+        error: "Could not parse model output as JSON",
+        parseErrorMessage: err.message,
+        rawLength: rawText.length,
+        stopReason: response.stop_reason,
+        raw: rawText.slice(0, 4000),
+      },
+      { status: 500 }
+    );
   }
 
   const { data: existing, error: fetchError } = await supabaseAdmin
