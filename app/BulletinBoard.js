@@ -600,6 +600,16 @@ function EventCard({ e }) {
           ✎ updated {formatShortDate(e.updated_at)}
         </p>
       )}
+      {e.source_url && (
+        <p
+          className="be-label"
+          style={{ fontSize: 10.5, margin: "8px 0 0", letterSpacing: "0.03em" }}
+        >
+          <a href={e.source_url} target="_blank" rel="noopener noreferrer" style={{ color: "#8A7E68" }}>
+            Source
+          </a>
+        </p>
+      )}
     </div>
   );
 }
