@@ -28,7 +28,11 @@ function containsBlockedContent(candidate) {
 function normalize(str) {
   return (str || "")
     .toLowerCase()
-    .replace(/[^a-z0-9 ]/g, "")
+    // Punctuation becomes a space (not dropped) so e.g. "Caucus/Finance"
+    // tokenizes as two words instead of merging into "caucusfinance" -
+    // that merge was silently breaking the word-overlap check below and
+    // letting the same event back in as a "new" one.
+    .replace(/[^a-z0-9 ]/g, " ")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -44,6 +48,23 @@ function titlesLikelySame(a, b) {
     if (wb.has(w)) shared++;
   });
   return shared / Math.min(wa.size, wb.size) >= 0.6;
+}
+
+// Sources sometimes report a specific venue's town as the venue name itself
+// rather than the municipality it's in (e.g. "MetLife Stadium" instead of
+// "East Rutherford" for the same NFL game or concert) - without this, the
+// same event can slip past the duplicate check purely because the town
+// strings don't match. This only affects duplicate *matching*; the town
+// value actually saved to the row (and shown/filtered on the site) is left
+// exactly as reported, since "MetLife Stadium" is a more useful filter
+// value there than lumping it into "East Rutherford".
+const TOWN_ALIASES = {
+  "metlife stadium": "east rutherford",
+  "american dream": "east rutherford",
+};
+function normalizedTown(town) {
+  const t = (town || "").trim().toLowerCase();
+  return TOWN_ALIASES[t] || t;
 }
 
 const RSS_FEEDS = [
@@ -299,7 +320,7 @@ ${schema}`
     }
 
     const match = existing.find(
-      (e) => e.town === c.town && e.date === c.date && titlesLikelySame(e.title, c.title)
+      (e) => normalizedTown(e.town) === normalizedTown(c.town) && e.date === c.date && titlesLikelySame(e.title, c.title)
     );
 
     if (match) {
