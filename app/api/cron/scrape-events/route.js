@@ -46,6 +46,28 @@ function titlesLikelySame(a, b) {
   return shared / Math.min(wa.size, wb.size) >= 0.6;
 }
 
+const RSS_FEEDS = [
+  "https://rss.app/feeds/4mgZbfatseC8yIMR.xml",
+  "https://rss.app/feeds/HB7hy8830AVx0zlk.xml",
+  "https://rss.app/feeds/8FOcP0cBulilBU2S.xml",
+];
+
+// Fetches raw feed content directly, rather than hoping web search finds
+// the same content indirectly. Never throws - a feed that's down or
+// removed just gets skipped, not treated as a fatal error.
+async function fetchFeedText(url) {
+  try {
+    const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (compatible; RutherfordBulletinBot/1.0)" } });
+    if (!res.ok) return null;
+    const text = await res.text();
+    // Keep prompts a reasonable size - feeds can be long, and we mainly
+    // need the most recent items anyway.
+    return text.slice(0, 20000);
+  } catch (err) {
+    return null;
+  }
+}
+
 const SCHEMA_INSTRUCTIONS = (todayStr) => `
 Respond with ONLY a JSON array (no other text, no markdown code fences) of
 objects with exactly these fields:
@@ -78,13 +100,13 @@ If you find no qualifying events, respond with exactly: []`;
 // Runs one focused search. Never throws - on any failure (API error,
 // unparseable response), returns an empty candidate list plus error info,
 // so one bad batch doesn't take down the other batches running alongside it.
-async function runSearchBatch(anthropic, label, promptBody, maxTokens) {
+async function runSearchBatch(anthropic, label, promptBody, maxTokens, useWebSearch = true) {
   try {
     const response = await anthropic.messages.create({
       model: "claude-sonnet-5",
       max_tokens: maxTokens,
       messages: [{ role: "user", content: promptBody }],
-      tools: [{ type: "web_search_20250305", name: "web_search" }],
+      ...(useWebSearch ? { tools: [{ type: "web_search_20250305", name: "web_search" }] } : {}),
     });
 
     const rawText = response.content
@@ -175,15 +197,43 @@ Meadowlands events. Use the event's actual town or venue name in the "town"
 field (e.g. "Secaucus", "MetLife Stadium").
 ${schema}`;
 
-  const [priorityResult, generalResult, meadowlandsResult] = await Promise.all([
+  const feedTexts = await Promise.all(RSS_FEEDS.map(fetchFeedText));
+  const feedSections = feedTexts
+    .map((text, i) => (text ? `--- FEED ${i + 1} (${RSS_FEEDS[i]}) ---\n${text}` : null))
+    .filter(Boolean);
+
+  const rssPrompt =
+    feedSections.length > 0
+      ? `You are extracting community events for a local town bulletin covering
+Rutherford, NJ and nearby towns from raw RSS feed content below. This
+content comes from social media accounts local to the area, already
+fetched directly - read through it and pull out anything that describes a
+real, upcoming public event happening in the next 30 days from ${todayStr}.
+Ignore items that aren't event announcements (general updates, photos with
+no event info, etc). If a post doesn't give a clear date, do your best to
+infer it from context (e.g. "posted" date plus "this Saturday"), and skip
+it if you genuinely can't determine a date.
+
+${feedSections.join("\n\n")}
+${schema}`
+      : null;
+
+  const batchPromises = [
     runSearchBatch(anthropic, "priority-sources", priorityPrompt, 10000),
     runSearchBatch(anthropic, "general-towns", generalPrompt, 8000),
     runSearchBatch(anthropic, "meadowlands", meadowlandsPrompt, 6000),
-  ]);
+  ];
+  if (rssPrompt) {
+    // No web_search needed here - the content's already been fetched directly.
+    batchPromises.push(runSearchBatch(anthropic, "rss-feeds", rssPrompt, 6000, false));
+  }
 
-  const batches = [priorityResult, generalResult, meadowlandsResult];
-  const allCandidates = batches.flatMap((b) => b.candidates);
-  const batchErrors = batches.filter((b) => b.error).map((b) => ({ batch: b.label, ...b.error }));
+  const batchResults = await Promise.all(batchPromises);
+
+  const allCandidates = batchResults.flatMap((b) => b.candidates);
+  const batchErrors = batchResults.filter((b) => b.error).map((b) => ({ batch: b.label, ...b.error }));
+  const feedsFetched = feedSections.length;
+  const feedsFailed = RSS_FEEDS.length - feedsFetched;
 
   const { data: existingRows, error: fetchError } = await supabaseAdmin
     .from("events")
@@ -290,5 +340,7 @@ ${schema}`;
     filtered,
     errors,
     batchErrors,
+    feedsFetched,
+    feedsFailed,
   });
 }
