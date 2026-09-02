@@ -161,15 +161,21 @@ export async function GET(request) {
   // this row is what proves the job at least started, and stays stuck on
   // "running" as a signal that it never finished.
   let logRowId = null;
+  let logStartError = null;
+  let logFinishError = null;
   try {
-    const { data: startRow } = await supabaseAdmin
+    const { data: startRow, error: startLogError } = await supabaseAdmin
       .from("scrape_runs")
       .insert({ run_at: runStartedAt, status: "running" })
       .select()
       .single();
-    logRowId = startRow?.id || null;
+    if (startLogError) {
+      logStartError = startLogError.message;
+    } else {
+      logRowId = startRow?.id || null;
+    }
   } catch (err) {
-    // If even this fails, proceed without a log row rather than blocking the run.
+    logStartError = err.message;
   }
 
   try {
@@ -388,18 +394,26 @@ ${schema}`
         feeds_failed: result.feedsFailed,
       };
       if (logRowId) {
-        await supabaseAdmin.from("scrape_runs").update(payload).eq("id", logRowId);
+        const { error: updateLogError } = await supabaseAdmin.from("scrape_runs").update(payload).eq("id", logRowId);
+        if (updateLogError) logFinishError = updateLogError.message;
       } else {
-        await supabaseAdmin.from("scrape_runs").insert({ run_at: runStartedAt, ...payload });
+        const { error: insertLogError } = await supabaseAdmin.from("scrape_runs").insert({ run_at: runStartedAt, ...payload });
+        if (insertLogError) logFinishError = insertLogError.message;
       }
     } catch (logErr) {
-      // If even the log write fails, there's nothing more we can do here -
-      // don't let a logging problem mask the real result.
+      logFinishError = logErr.message;
     }
   }
 
+  // Surfaced directly in the response (rather than only console logs) so a
+  // logging problem is visible immediately in a manual test, not just
+  // something to discover later from an empty table.
+  if (logStartError || logFinishError) {
+    result.logWriteErrors = { start: logStartError, finish: logFinishError };
+  }
+
   if (fatalError) {
-    return Response.json({ error: fatalError }, { status: 500 });
+    return Response.json({ error: fatalError, ...result }, { status: 500 });
   }
 
   return Response.json(result);
