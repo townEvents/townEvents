@@ -202,6 +202,10 @@ async function runSearchBatch(anthropic, label, promptBody, maxTokens, maxSearch
       const response = await anthropic.messages.create({
         model: "claude-sonnet-5",
         max_tokens: maxTokens,
+        // These batches only search and extract. Reasoning was using up the
+        // output budget before the JSON got written (one batch returned no
+        // text at all), so it's turned off.
+        thinking: { type: "disabled" },
         messages,
         ...(maxSearches > 0 ? { tools: [{ type: "web_search_20250305", name: "web_search", max_uses: maxSearches }] } : {}),
       });
@@ -360,8 +364,8 @@ ${schema}`
     // The last number caps web searches per batch - keeps each batch's
     // search loop (and its cost) bounded.
     runSearchBatch(anthropic, "priority-sources", priorityPrompt, 10000, 8),
-    runSearchBatch(anthropic, "general-towns", generalPrompt, 8000, 8),
-    runSearchBatch(anthropic, "meadowlands", meadowlandsPrompt, 6000, 5),
+    runSearchBatch(anthropic, "general-towns", generalPrompt, 10000, 8),
+    runSearchBatch(anthropic, "meadowlands", meadowlandsPrompt, 8000, 5),
   ];
   if (rssPrompt) {
     // No web_search needed here - the content's already been fetched directly.
