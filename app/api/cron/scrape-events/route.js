@@ -1,6 +1,7 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { getSupabaseAdmin } from "../../../../lib/supabaseAdmin";
 import { todayStrEastern } from "../../../../lib/dates";
+import { fetchCalendarCandidates } from "../../../../lib/calendar";
 
 // Give the job room to run - even split into smaller batches, this does
 // real web search work. 300 seconds is the current ceiling on Vercel's
@@ -90,6 +91,19 @@ const RSS_FEEDS = [
   "https://rss.app/feeds/HB7hy8830AVx0zlk.xml",
   "https://rss.app/feeds/8FOcP0cBulilBU2S.xml",
   "https://rss.app/feeds/eEnIl6SdZwOOOEse.xml",
+  "https://rss.app/feeds/TSsY0zxiYvyAG7Sb.xml",
+  "https://rss.app/feeds/obmT2Cd7uLHN3pWr.xml",
+  "https://rss.app/feeds/in7LN63i1w1g80fR.xml",
+];
+
+// Public Google Calendars read directly (as .ics) rather than through the AI
+// batches, so their dates, times and locations come through exactly as
+// entered instead of being re-extracted by the model.
+const CALENDARS = [
+  {
+    icsUrl: "https://calendar.google.com/calendar/ical/thisisrutherford%40gmail.com/public/basic.ics",
+    publicUrl: "https://calendar.google.com/calendar/u/0/embed?src=thisisrutherford@gmail.com&ctz=America/New_York",
+  },
 ];
 
 // Fetches raw feed content directly, rather than hoping web search finds
@@ -301,7 +315,10 @@ ${schema}`
 
   const batchResults = await Promise.all(batchPromises);
 
-  const allCandidates = batchResults.flatMap((b) => b.candidates);
+  // Calendar events go first so, where both sources describe the same event,
+  // the calendar's exact details are what gets stored.
+  const calendarCandidates = (await Promise.all(CALENDARS.map((c) => fetchCalendarCandidates(c, todayStr)))).flat();
+  const allCandidates = [...calendarCandidates, ...batchResults.flatMap((b) => b.candidates)];
   const batchErrors = batchResults.filter((b) => b.error).map((b) => ({ batch: b.label, ...b.error }));
   const feedsFetched = feedSections.length;
   const feedsFailed = RSS_FEEDS.length - feedsFetched;
@@ -403,6 +420,7 @@ ${schema}`
   }
 
   result.found = allCandidates.length;
+  result.calendarFound = calendarCandidates.length;
   result.inserted = inserted;
   result.cancelled = cancelled;
   result.enriched = enriched;
