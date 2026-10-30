@@ -151,36 +151,89 @@ anything private or not open to the public.
 
 If you find no qualifying events, respond with exactly: []`;
 
+// Pulls the JSON array out of the model's text. If the text is cut off or has
+// a malformed event partway through, keeps every complete event before the
+// break instead of throwing the whole batch away.
+function parseCandidateArray(rawText) {
+  // The array opens with "[" followed by an event or "]" - not just the
+  // first "[", which could be a stray citation marker like "[1]" in prose.
+  const start = rawText.search(/\[\s*[{\]]/);
+  if (start === -1) throw new Error("No JSON array in response");
+  const end = rawText.lastIndexOf("]");
+  let firstError;
+  if (end > start) {
+    try {
+      return { candidates: JSON.parse(rawText.slice(start, end + 1)), salvaged: false };
+    } catch (err) {
+      firstError = err;
+    }
+  }
+  const body = rawText.slice(start);
+  for (let cut = body.lastIndexOf("}"); cut !== -1; cut = body.lastIndexOf("}", cut - 1)) {
+    try {
+      return { candidates: JSON.parse(`${body.slice(0, cut + 1)}]`), salvaged: true };
+    } catch (err) {
+      // keep walking back to an earlier event boundary
+    }
+  }
+  throw firstError || new Error("Could not parse any events from response");
+}
+
+// Web search is a server-side loop that can stop early with "pause_turn" and
+// expects to be sent back to carry on. These limits keep that bounded: a few
+// continuations at most, none once the batch has already run a long time
+// (the whole job has to fit inside the function's time limit).
+const MAX_CONTINUATIONS = 3;
+const CONTINUE_ONLY_BEFORE_MS = 120000;
+
 // Runs one focused search. Never throws - on any failure (API error,
 // unparseable response), returns an empty candidate list plus error info,
 // so one bad batch doesn't take down the other batches running alongside it.
-async function runSearchBatch(anthropic, label, promptBody, maxTokens, useWebSearch = true) {
+// Always returns stats (stop reasons, tokens, searches) so a bad or costly
+// batch can be diagnosed from scrape_runs instead of guessed at.
+async function runSearchBatch(anthropic, label, promptBody, maxTokens, maxSearches = 0) {
+  const startedAt = Date.now();
+  const stats = { stopReasons: [], continuations: 0, searches: 0, inputTokens: 0, outputTokens: 0, salvaged: false, ms: 0 };
+  let rawText = "";
   try {
-    const response = await anthropic.messages.create({
-      model: "claude-sonnet-5",
-      max_tokens: maxTokens,
-      messages: [{ role: "user", content: promptBody }],
-      ...(useWebSearch ? { tools: [{ type: "web_search_20250305", name: "web_search" }] } : {}),
-    });
+    let messages = [{ role: "user", content: promptBody }];
+    const texts = [];
+    for (let turn = 0; ; turn++) {
+      const response = await anthropic.messages.create({
+        model: "claude-sonnet-5",
+        max_tokens: maxTokens,
+        messages,
+        ...(maxSearches > 0 ? { tools: [{ type: "web_search_20250305", name: "web_search", max_uses: maxSearches }] } : {}),
+      });
 
-    const rawText = response.content
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("\n")
-      .replace(/```json|```/g, "")
-      .trim();
+      stats.stopReasons.push(response.stop_reason);
+      stats.inputTokens += response.usage?.input_tokens || 0;
+      stats.outputTokens += response.usage?.output_tokens || 0;
+      stats.searches += response.content.filter((b) => b.type === "server_tool_use" && b.name === "web_search").length;
+      texts.push(...response.content.filter((b) => b.type === "text").map((b) => b.text));
 
-    const firstBracket = rawText.indexOf("[");
-    const lastBracket = rawText.lastIndexOf("]");
-    const text = firstBracket !== -1 && lastBracket !== -1 ? rawText.slice(firstBracket, lastBracket + 1) : rawText;
+      if (response.stop_reason !== "pause_turn" || turn >= MAX_CONTINUATIONS || Date.now() - startedAt > CONTINUE_ONLY_BEFORE_MS) break;
+      stats.continuations++;
+      messages = [...messages, { role: "assistant", content: response.content }];
+    }
 
-    const candidates = JSON.parse(text);
-    return { label, candidates, error: null };
+    rawText = texts.join("\n").replace(/```json|```/g, "").trim();
+    const { candidates, salvaged } = parseCandidateArray(rawText);
+    stats.salvaged = salvaged;
+    stats.ms = Date.now() - startedAt;
+    return { label, candidates, error: null, stats };
   } catch (err) {
+    stats.ms = Date.now() - startedAt;
     return {
       label,
       candidates: [],
-      error: { message: err.message, raw: (err.rawText || "").slice(0, 1000) },
+      error: {
+        message: err.message,
+        stop_reason: stats.stopReasons[stats.stopReasons.length - 1] || null,
+        raw: rawText.slice(0, 400),
+        raw_tail: rawText.slice(-400),
+      },
+      stats,
     };
   }
 }
@@ -206,7 +259,7 @@ export async function GET(request) {
 
   const result = {
     found: 0, inserted: 0, cancelled: 0, enriched: 0, skipped: 0, filtered: 0,
-    errors: [], batchErrors: [], feedsFetched: 0, feedsFailed: 0,
+    errors: [], batchErrors: [], batchStats: [], feedsFetched: 0, feedsFailed: 0,
   };
   let fatalError = null;
 
@@ -304,13 +357,15 @@ ${schema}`
       : null;
 
   const batchPromises = [
-    runSearchBatch(anthropic, "priority-sources", priorityPrompt, 10000),
-    runSearchBatch(anthropic, "general-towns", generalPrompt, 8000),
-    runSearchBatch(anthropic, "meadowlands", meadowlandsPrompt, 6000),
+    // The last number caps web searches per batch - keeps each batch's
+    // search loop (and its cost) bounded.
+    runSearchBatch(anthropic, "priority-sources", priorityPrompt, 10000, 8),
+    runSearchBatch(anthropic, "general-towns", generalPrompt, 8000, 8),
+    runSearchBatch(anthropic, "meadowlands", meadowlandsPrompt, 6000, 5),
   ];
   if (rssPrompt) {
     // No web_search needed here - the content's already been fetched directly.
-    batchPromises.push(runSearchBatch(anthropic, "rss-feeds", rssPrompt, 6000, false));
+    batchPromises.push(runSearchBatch(anthropic, "rss-feeds", rssPrompt, 6000, 0));
   }
 
   const batchResults = await Promise.all(batchPromises);
@@ -320,6 +375,7 @@ ${schema}`
   const calendarCandidates = (await Promise.all(CALENDARS.map((c) => fetchCalendarCandidates(c, todayStr)))).flat();
   const allCandidates = [...calendarCandidates, ...batchResults.flatMap((b) => b.candidates)];
   const batchErrors = batchResults.filter((b) => b.error).map((b) => ({ batch: b.label, ...b.error }));
+  const batchStats = batchResults.map((b) => ({ batch: b.label, candidates: b.candidates.length, ...b.stats }));
   const feedsFetched = feedSections.length;
   const feedsFailed = RSS_FEEDS.length - feedsFetched;
 
@@ -428,6 +484,7 @@ ${schema}`
   result.filtered = filtered;
   result.errors = errors;
   result.batchErrors = batchErrors;
+  result.batchStats = batchStats;
   result.feedsFetched = feedsFetched;
   result.feedsFailed = feedsFailed;
   } catch (err) {
@@ -448,6 +505,7 @@ ${schema}`
         filtered: result.filtered,
         error_count: result.errors.length,
         batch_errors: result.batchErrors,
+        batch_stats: result.batchStats,
         feeds_fetched: result.feedsFetched,
         feeds_failed: result.feedsFailed,
       };
