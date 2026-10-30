@@ -89,6 +89,7 @@ const RSS_FEEDS = [
   "https://rss.app/feeds/4mgZbfatseC8yIMR.xml",
   "https://rss.app/feeds/HB7hy8830AVx0zlk.xml",
   "https://rss.app/feeds/8FOcP0cBulilBU2S.xml",
+  "https://rss.app/feeds/eEnIl6SdZwOOOEse.xml",
 ];
 
 // Fetches raw feed content directly, rather than hoping web search finds
