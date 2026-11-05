@@ -43,7 +43,7 @@ export default function PrivacyPage() {
         <h2 style={heading}>Suggesting an event</h2>
         <p style={body}>
           If you use the "Submit an event" form, we save what you type into it: the event name, date, location, description and a link to
-          the public post. Submissions are reviewed by hand before anything is posted.
+          the public post. A copy of each submission is emailed to us, and submissions are reviewed by hand before anything is posted.
         </p>
         <p style={body}>
           You can also choose to give your name, email address and phone number. These are all optional. We use them only to contact you
@@ -60,8 +60,8 @@ export default function PrivacyPage() {
         <h2 style={heading}>How long we keep it, and deleting it</h2>
         <p style={body}>
           We keep contact details from event submissions and from the contact form only as long as we need them to follow up. We don't
-          delete them automatically, so they may be kept until we remove them by hand. Copies of contact messages also sit in our email
-          inbox, and our email delivery service keeps its own records.
+          delete them automatically, so they may be kept until we remove them by hand. Copies of contact messages and event submissions
+          also sit in our email inbox, and our email delivery service keeps its own records.
         </p>
         <p style={body}>
           If you'd like your information removed, including your address on the newsletter list (unsubscribing stops the emails but

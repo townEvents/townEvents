@@ -22,6 +22,9 @@ alter table public.event_submissions add column contact_email text check (contac
 alter table public.event_submissions add column contact_name text check (contact_name is null or char_length(contact_name) <= 100);
 alter table public.event_submissions add column contact_phone text check (contact_phone is null or char_length(contact_phone) <= 30);
 
+-- Whether the "new submission" email to the site owner went out.
+alter table public.event_submissions add column notified boolean not null default false;
+
 alter table public.event_submissions enable row level security;
 revoke all on public.event_submissions from anon, authenticated;
 grant select, insert, update, delete on public.event_submissions to service_role;
