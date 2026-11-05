@@ -149,7 +149,11 @@ export default function WeeklyDigest({ grouped, siteUrl }) {
                         </a>
                         <br />
                         <br />
-                        Rutherford Bulletin &middot; Rutherford, NJ
+                        Rutherford Bulletin
+                        <br />
+                        PO Box 144
+                        <br />
+                        Rutherford, NJ 07070
                       </td>
                     </tr>
                   </tbody>
