@@ -54,7 +54,8 @@ export default function Contact() {
       if (!window.turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return;
       turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
         sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-        size: "invisible",
+        action: "contact",
+        appearance: "interaction-only",
         callback: (token) => {
           turnstileTokenRef.current = token;
         },

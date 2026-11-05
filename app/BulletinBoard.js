@@ -77,7 +77,8 @@ export default function Bulletin() {
       if (!window.turnstile || !turnstileContainerRef.current || turnstileWidgetIdRef.current) return;
       turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
         sitekey: process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY,
-        size: "invisible",
+        action: "newsletter_signup",
+        appearance: "interaction-only",
         callback: (token) => {
           turnstileTokenRef.current = token;
         },

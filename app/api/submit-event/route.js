@@ -37,7 +37,7 @@ export async function POST(request) {
   }
 
   const ip = request.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-  const verified = await verifyTurnstile(body.turnstileToken, ip);
+  const verified = await verifyTurnstile(body.turnstileToken, ip, "event_submission");
   if (!verified) {
     return Response.json({ error: "Verification failed. Please try again." }, { status: 400 });
   }
