@@ -42,8 +42,7 @@ export default function PrivacyPage() {
         <h2 style={heading}>Site visits</h2>
         <p style={body}>
           We use privacy-friendly analytics to count visits to the site. It doesn't use cookies and doesn't track individual visitors
-          across other sites. The signup form also uses an automatic spam check (Cloudflare Turnstile) to tell real visitors from bots.
-        </p>
+          across other sites.        </p>
 
         <p style={{ ...body, marginTop: 32 }}>
           <Link href="/" style={{ color: "#9A3324" }}>
