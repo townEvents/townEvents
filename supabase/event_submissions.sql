@@ -16,6 +16,9 @@ create table public.event_submissions (
   url text not null check (char_length(url) <= 500 and url ~* '^https?://')
 );
 
+-- Optional email, only if the submitter chose to leave one for follow-up.
+alter table public.event_submissions add column contact_email text check (contact_email is null or char_length(contact_email) <= 254);
+
 alter table public.event_submissions enable row level security;
 revoke all on public.event_submissions from anon, authenticated;
 grant select, insert, update, delete on public.event_submissions to service_role;

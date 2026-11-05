@@ -28,8 +28,9 @@ export default function PrivacyPage() {
         </p>
         <p style={body}>
           If you suggest an event using the "Submit an event" form, we save only what you type into it: the event name, date, location,
-          description and a link to the public post. We don't ask for your name, email or any other contact information. Submissions are
-          reviewed before anything is posted.
+          description and a link to the public post, plus an email address if you choose to give one. The email is optional. If you give
+          it, we use it only to follow up with you about that submission. It is never shown on the site and is not added to our mailing
+          list. We don't ask for your name or any other contact information. Submissions are reviewed before anything is posted.
         </p>
 
         <h2 style={heading}>Why we collect it</h2>

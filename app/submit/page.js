@@ -36,7 +36,7 @@ function Field({ label, hint, children }) {
   );
 }
 
-const emptyForm = { title: "", date: "", location: "", description: "", url: "", company: "" };
+const emptyForm = { title: "", date: "", location: "", description: "", url: "", contact_email: "", company: "" };
 
 export default function SubmitEvent() {
   const today = todayStrEastern();
@@ -117,8 +117,8 @@ export default function SubmitEvent() {
       <div style={{ maxWidth: 480, margin: "0 auto" }}>
         <h1 style={{ fontFamily: "'Special Elite', monospace", fontSize: 26, margin: "0 0 4px" }}>Submit an Event</h1>
         <p style={{ fontSize: 14, color: "#5A5040", marginTop: 0, marginBottom: 24, lineHeight: 1.5 }}>
-          Know about something happening around town that's not on the board? Send it in. Every submission is reviewed before anything is posted, and we
-          don't ask for your name or contact info.
+          Know about something happening around town that's not on the board? Send it in. Every submission is reviewed before anything is posted. We
+          don't ask for your name, and leaving an email is entirely optional.
         </p>
 
         {status === "success" ? (
@@ -164,6 +164,13 @@ export default function SubmitEvent() {
 
             <Field label="Link to the public post *" hint="Where the event is announced, such as a Facebook post, a town page or a ticket page.">
               <input required type="text" inputMode="url" autoCapitalize="none" spellCheck={false} maxLength={500} placeholder="www.example.com or https://…" value={form.url} onChange={set("url")} style={inputStyle} />
+            </Field>
+
+            <Field
+              label="Your email (optional)"
+              hint="Only if you're happy for us to follow up with you about this event. It's never shown on the site or added to the mailing list."
+            >
+              <input type="email" maxLength={254} autoComplete="email" value={form.contact_email} onChange={set("contact_email")} style={inputStyle} />
             </Field>
 
             {/* Honeypot: hidden from people, but bots that fill every field will fill this. */}
