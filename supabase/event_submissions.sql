@@ -18,6 +18,9 @@ create table public.event_submissions (
 
 -- Optional email, only if the submitter chose to leave one for follow-up.
 alter table public.event_submissions add column contact_email text check (contact_email is null or char_length(contact_email) <= 254);
+-- Optional name and phone number, likewise only if the submitter chose to give them.
+alter table public.event_submissions add column contact_name text check (contact_name is null or char_length(contact_name) <= 100);
+alter table public.event_submissions add column contact_phone text check (contact_phone is null or char_length(contact_phone) <= 30);
 
 alter table public.event_submissions enable row level security;
 revoke all on public.event_submissions from anon, authenticated;

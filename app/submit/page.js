@@ -36,7 +36,7 @@ function Field({ label, hint, children }) {
   );
 }
 
-const emptyForm = { title: "", date: "", location: "", description: "", url: "", contact_email: "", company: "" };
+const emptyForm = { title: "", date: "", location: "", description: "", url: "", contact_name: "", contact_email: "", contact_phone: "", company: "" };
 
 export default function SubmitEvent() {
   const today = todayStrEastern();
@@ -117,8 +117,8 @@ export default function SubmitEvent() {
       <div style={{ maxWidth: 480, margin: "0 auto" }}>
         <h1 style={{ fontFamily: "'Special Elite', monospace", fontSize: 26, margin: "0 0 4px" }}>Submit an Event</h1>
         <p style={{ fontSize: 14, color: "#5A5040", marginTop: 0, marginBottom: 24, lineHeight: 1.5 }}>
-          Know about something happening around town that's not on the board? Send it in. Every submission is reviewed before anything is posted. We
-          don't ask for your name, and leaving an email is entirely optional.
+          Know about something happening around town that's not on the board? Send it in. Every submission is reviewed before anything is posted, and
+          sharing your contact details is entirely optional.
         </p>
 
         {status === "success" ? (
@@ -166,11 +166,21 @@ export default function SubmitEvent() {
               <input required type="text" inputMode="url" autoCapitalize="none" spellCheck={false} maxLength={500} placeholder="www.example.com or https://…" value={form.url} onChange={set("url")} style={inputStyle} />
             </Field>
 
-            <Field
-              label="Your email (optional)"
-              hint="Only if you're happy for us to follow up with you about this event. It's never shown on the site or added to the mailing list."
-            >
+            <p style={{ fontSize: 12.5, color: "#5A5040", margin: "18px 0 10px", lineHeight: 1.5 }}>
+              <strong>Optional contact details.</strong> Only if you're happy for us to follow up with you about this event. They're never shown on the
+              site or added to the mailing list.
+            </p>
+
+            <Field label="Your name (optional)">
+              <input maxLength={100} autoComplete="name" value={form.contact_name} onChange={set("contact_name")} style={inputStyle} />
+            </Field>
+
+            <Field label="Your email (optional)">
               <input type="email" maxLength={254} autoComplete="email" value={form.contact_email} onChange={set("contact_email")} style={inputStyle} />
+            </Field>
+
+            <Field label="Your phone number (optional)">
+              <input type="tel" maxLength={30} autoComplete="tel" value={form.contact_phone} onChange={set("contact_phone")} style={inputStyle} />
             </Field>
 
             {/* Honeypot: hidden from people, but bots that fill every field will fill this. */}

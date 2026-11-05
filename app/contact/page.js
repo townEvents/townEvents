@@ -35,7 +35,7 @@ function Field({ label, hint, children }) {
   );
 }
 
-const emptyForm = { email: "", message: "", company: "" };
+const emptyForm = { name: "", email: "", phone: "", message: "", company: "" };
 
 export default function Contact() {
   const [form, setForm] = useState(emptyForm);
@@ -130,8 +130,16 @@ export default function Contact() {
           <form onSubmit={handleSubmit} style={{ background: "#FBF7EB", border: "1.5px solid #2B2420", borderRadius: 4, padding: 22, boxShadow: "3px 3px 0 rgba(43,36,32,0.2)" }}>
             <div ref={turnstileContainerRef}></div>
 
-            <Field label="Your email *" hint="So we can reply. We don't ask for your name, and your email is never added to the mailing list.">
+            <Field label="Your name (optional)">
+              <input maxLength={100} autoComplete="name" value={form.name} onChange={set("name")} style={inputStyle} />
+            </Field>
+
+            <Field label="Your email *" hint="So we can reply. Your details are only used to reply to you and are never added to the mailing list.">
               <input required type="email" maxLength={254} autoComplete="email" value={form.email} onChange={set("email")} style={inputStyle} />
+            </Field>
+
+            <Field label="Your phone number (optional)">
+              <input type="tel" maxLength={30} autoComplete="tel" value={form.phone} onChange={set("phone")} style={inputStyle} />
             </Field>
 
             <Field label="Message *">

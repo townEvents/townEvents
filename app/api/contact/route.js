@@ -74,7 +74,15 @@ export async function POST(request) {
         to: process.env.CONTACT_TO_EMAIL,
         replyTo: cleaned.value.email,
         subject: `Website contact from ${cleaned.value.email}`,
-        text: `${cleaned.value.message}\n\n--\nSent through the Rutherford Bulletin contact form. Reply to this email to answer ${cleaned.value.email}.`,
+        text: [
+          cleaned.value.message,
+          "",
+          "--",
+          `Name: ${cleaned.value.name || "(not given)"}`,
+          `Email: ${cleaned.value.email}`,
+          `Phone: ${cleaned.value.phone || "(not given)"}`,
+          "Sent through the Rutherford Bulletin contact form. Reply to this email to answer the sender.",
+        ].join("\n"),
       });
       if (sendError) {
         console.error("Contact email failed:", sendError.message);

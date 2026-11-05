@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export const metadata = {
   title: "Privacy Policy | Rutherford Bulletin",
-  description: "How Rutherford Bulletin handles email addresses.",
+  description: "How Rutherford Bulletin handles the information you give us.",
 };
 
 const heading = { fontFamily: "'Special Elite', monospace", fontSize: 18, margin: "28px 0 8px" };
@@ -16,44 +16,70 @@ export default function PrivacyPage() {
           <h1 style={{ fontFamily: "'Special Elite', monospace", fontSize: "clamp(26px, 5vw, 38px)", margin: 0, lineHeight: 1.05 }}>
             Privacy Policy
           </h1>
-          <p style={{ margin: "6px 0 0", fontSize: 14, color: "#5A5040" }}>Rutherford Bulletin</p>
+          <p style={{ margin: "6px 0 0", fontSize: 14, color: "#5A5040" }}>Rutherford Bulletin · Last updated November 5, 2026</p>
         </div>
       </header>
 
       <main style={{ maxWidth: 720, margin: "0 auto", padding: "8px 20px 60px" }}>
-        <h2 style={heading}>What we collect</h2>
-        <p style={body}>
-          We only collect email addresses. We do not collect names or any other identifying information. The only way we collect an email
-          address is through the signup form on this website.
-        </p>
-        <p style={body}>
-          If you suggest an event using the "Submit an event" form, we save only what you type into it: the event name, date, location,
-          description and a link to the public post, plus an email address if you choose to give one. The email is optional. If you give
-          it, we use it only to follow up with you about that submission. It is never shown on the site and is not added to our mailing
-          list. We don't ask for your name or any other contact information. Submissions are reviewed before anything is posted.
+        <p style={{ ...body, marginTop: 24 }}>
+          This page explains what information we collect through this website, why we collect it, and who sees it. It's organized by
+          feature, because each one collects something different.
         </p>
 
+        <h2 style={heading}>Email newsletter signup</h2>
         <p style={body}>
-          If you write to us using the "Contact" form, we save your message and the email address you give, so that we can reply. We use
-          them only to respond to you. Your email address is not added to our mailing list. We don't ask for your name.
+          We only collect your email address. We do not collect names or any other identifying information. The only way we collect an
+          email address for the newsletter is through the signup form on this website.
         </p>
-
-        <h2 style={heading}>Why we collect it</h2>
         <p style={body}>
           We collect email addresses to send a weekly email about what's going on in town. These emails may contain marketing messages.
           Every email includes an unsubscribe link, and you can use it at any time to stop receiving them.
         </p>
+        <p style={body}>
+          We don't share this list with others. Addresses are stored with our email delivery service, which sends the weekly email on our
+          behalf.
+        </p>
+
+        <h2 style={heading}>Suggesting an event</h2>
+        <p style={body}>
+          If you use the "Submit an event" form, we save what you type into it: the event name, date, location, description and a link to
+          the public post. Submissions are reviewed by hand before anything is posted.
+        </p>
+        <p style={body}>
+          You can also choose to give your name, email address and phone number. These are all optional. We use them only to contact you
+          about your submission. They are never shown on the site and are never added to our mailing list.
+        </p>
+
+        <h2 style={heading}>Contacting us</h2>
+        <p style={body}>
+          If you use the "Contact" form, we save your message and the email address you give, so that we can reply. You can also choose
+          to give your name and phone number, which are optional. We use these details only to respond to you. They are never added to
+          our mailing list. Messages are delivered to our email inbox.
+        </p>
+
+        <h2 style={heading}>How long we keep it, and deleting it</h2>
+        <p style={body}>
+          We keep contact details from event submissions and from the contact form only as long as we need them to follow up. We don't
+          delete them automatically, so they may be kept until we remove them by hand. Copies of contact messages also sit in our email
+          inbox, and our email delivery service keeps its own records.
+        </p>
+        <p style={body}>
+          If you'd like your information removed, including your address on the newsletter list (unsubscribing stops the emails but
+          doesn't erase the address), send a message through the Contact form and ask. We will delete what we hold, including copies in
+          our inbox.
+        </p>
 
         <h2 style={heading}>Who sees it</h2>
         <p style={body}>
-          We don't share this list with others. Your email address is stored with our email delivery service, which sends the weekly
-          email on our behalf.
+          Information you send us is seen only by the person who runs this site. It is stored with the services we use to operate the
+          site, such as our database host and email delivery service. We don't share it with others.
         </p>
 
         <h2 style={heading}>Site visits</h2>
         <p style={body}>
           We use privacy-friendly analytics to count visits to the site. It doesn't use cookies and doesn't track individual visitors
-          across other sites.        </p>
+          across other sites.
+        </p>
 
         <p style={{ ...body, marginTop: 32 }}>
           <Link href="/" style={{ color: "#9A3324" }}>
