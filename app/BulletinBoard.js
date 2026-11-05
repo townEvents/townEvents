@@ -357,6 +357,10 @@ export default function Bulletin() {
             Event information on this site is gathered from public sources and may not always be accurate or up to date. Please confirm details with the organizer before you go.
           </p>
           <p style={{ margin: 0 }}>
+            <Link href="/submit" style={{ color: "#6B5D4F" }}>
+              Submit an event
+            </Link>
+            {" · "}
             <Link href="/privacy" style={{ color: "#6B5D4F" }}>
               Privacy Policy
             </Link>

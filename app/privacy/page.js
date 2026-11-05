@@ -26,6 +26,11 @@ export default function PrivacyPage() {
           We only collect email addresses. We do not collect names or any other identifying information. The only way we collect an email
           address is through the signup form on this website.
         </p>
+        <p style={body}>
+          If you suggest an event using the "Submit an event" form, we save only what you type into it: the event name, date, location,
+          description and a link to the public post. We don't ask for your name, email or any other contact information. Submissions are
+          reviewed before anything is posted.
+        </p>
 
         <h2 style={heading}>Why we collect it</h2>
         <p style={body}>
