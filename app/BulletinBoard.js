@@ -352,7 +352,7 @@ export default function Bulletin() {
       </main>
 
       <footer style={{ borderTop: "1.5px solid #B8A576", padding: "18px 20px 28px", background: "#E8DFC4" }}>
-        <div style={{ maxWidth: 960, margin: "0 auto", fontSize: 12, color: "#6B5D4F", lineHeight: 1.5 }}>
+        <div style={{ maxWidth: 920, margin: "0 auto", fontSize: 12, color: "#6B5D4F", lineHeight: 1.5 }}>
           <p style={{ margin: "0 0 6px" }}>
             Event information on this site is gathered from public sources and may not always be accurate or up to date. Please confirm details with the organizer before you go.
           </p>
