@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useRef } from "react";
+import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
 import { todayStrEastern, addDaysToDateStr, daysBetween } from "../lib/dates";
 
@@ -43,16 +44,6 @@ function inRange(dateStr, range, today) {
   return daysBetween(today, dateStr) >= 0;
 }
 
-function monthGrid(year, month) {
-  const first = new Date(year, month, 1);
-  const startDay = first.getDay();
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const cells = [];
-  for (let i = 0; i < startDay; i++) cells.push(null);
-  for (let d = 1; d <= daysInMonth; d++) cells.push(`${year}-${String(month + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`);
-  return cells;
-}
-
 function isValidEmail(v) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 }
@@ -66,12 +57,6 @@ export default function Bulletin() {
   const [search, setSearch] = useState("");
   const [activeTowns, setActiveTowns] = useState(new Set());
   const [range, setRange] = useState("week");
-  const [view, setView] = useState("list");
-  const [cursor, setCursor] = useState(() => {
-    const [y, m] = today.split("-");
-    return { year: Number(y), month: Number(m) - 1 };
-  });
-  const [selectedDay, setSelectedDay] = useState(null);
 
   const [email, setEmail] = useState("");
   const [subStatus, setSubStatus] = useState(""); // "", "success", "duplicate", "error", "invalid"
@@ -132,11 +117,9 @@ export default function Bulletin() {
     return events
       .filter((e) => {
         if (activeTowns.size > 0 && !activeTowns.has(e.town)) return false;
-        if (view === "list") {
-          if (range === "all") {
-            if (daysBetween(today, e.date) < 0) return false;
-          } else if (!inRange(e.date, range, today)) return false;
-        }
+        if (range === "all") {
+          if (daysBetween(today, e.date) < 0) return false;
+        } else if (!inRange(e.date, range, today)) return false;
         if (search.trim()) {
           const q = search.toLowerCase();
           const hay = `${e.title} ${e.description || ""} ${e.location || ""} ${e.town}`.toLowerCase();
@@ -145,7 +128,7 @@ export default function Bulletin() {
         return true;
       })
       .sort((a, b) => (a.date + (a.time || "")).localeCompare(b.date + (b.time || "")));
-  }, [events, activeTowns, range, search, view, today]);
+  }, [events, activeTowns, range, search, today]);
 
   const grouped = useMemo(() => {
     const map = new Map();
@@ -155,16 +138,6 @@ export default function Bulletin() {
     });
     return [...map.entries()].sort((a, b) => a[0].localeCompare(b[0]));
   }, [filtered]);
-
-  const monthCells = useMemo(() => monthGrid(cursor.year, cursor.month), [cursor]);
-  const monthCounts = useMemo(() => {
-    const map = {};
-    events.forEach((e) => {
-      if (activeTowns.size > 0 && !activeTowns.has(e.town)) return;
-      map[e.date] = (map[e.date] || 0) + 1;
-    });
-    return map;
-  }, [events, activeTowns]);
 
   function toggleTown(t) {
     setActiveTowns((prev) => {
@@ -211,8 +184,6 @@ export default function Bulletin() {
     }
   }
 
-  const monthLabel = new Date(cursor.year, cursor.month, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" });
-
   return (
     <div style={{ minHeight: "100vh", background: "#EDE4CC", color: "#2B2420", fontFamily: "'Source Serif 4', Georgia, serif" }}>
       <style>{`
@@ -254,45 +225,27 @@ export default function Bulletin() {
             onChange={(e) => setSearch(e.target.value)}
             style={{ flex: "1 1 200px", padding: "10px 12px", border: "1.5px solid #2B2420", borderRadius: 3, background: "#FBF7EB", fontFamily: "'Source Serif 4', serif", fontSize: 15 }}
           />
-          <div style={{ display: "flex", gap: 6 }}>
-            <button
-              className="be-btn"
-              onClick={() => setView("list")}
-              style={{ padding: "9px 14px", fontSize: 13, borderRadius: 3, background: view === "list" ? "#2B2420" : "transparent", color: view === "list" ? "#F4EEDB" : "#2B2420", border: "1.5px solid #2B2420" }}
-            >
-              List
-            </button>
-            <button
-              className="be-btn"
-              onClick={() => setView("month")}
-              style={{ padding: "9px 14px", fontSize: 13, borderRadius: 3, background: view === "month" ? "#2B2420" : "transparent", color: view === "month" ? "#F4EEDB" : "#2B2420", border: "1.5px solid #2B2420" }}
-            >
-              Month
-            </button>
-          </div>
         </div>
 
-        {view === "list" && (
-          <div className="be-label" style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
-            {["today", "week", "month", "all"].map((r) => (
-              <button
-                key={r}
-                className="be-btn"
-                onClick={() => setRange(r)}
-                style={{
-                  padding: "6px 14px",
-                  fontSize: 13,
-                  borderRadius: 20,
-                  background: range === r ? "#3F5443" : "#FBF7EB",
-                  color: range === r ? "#F4EEDB" : "#2B2420",
-                  border: "1.5px solid #3F5443",
-                }}
-              >
-                {r === "today" ? "Today" : r === "week" ? "This Week" : r === "month" ? "This Month" : "All Upcoming"}
-              </button>
-            ))}
-          </div>
-        )}
+        <div className="be-label" style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+          {["today", "week", "month", "all"].map((r) => (
+            <button
+              key={r}
+              className="be-btn"
+              onClick={() => setRange(r)}
+              style={{
+                padding: "6px 14px",
+                fontSize: 13,
+                borderRadius: 20,
+                background: range === r ? "#3F5443" : "#FBF7EB",
+                color: range === r ? "#F4EEDB" : "#2B2420",
+                border: "1.5px solid #3F5443",
+              }}
+            >
+              {r === "today" ? "Today" : r === "week" ? "This Week" : r === "month" ? "This Month" : "All Upcoming"}
+            </button>
+          ))}
+        </div>
 
         {towns.length > 0 && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
@@ -321,7 +274,6 @@ export default function Bulletin() {
         {loading && <p style={{ color: "#6B5D4F" }}>Loading the board…</p>}
 
         {!loading &&
-          view === "list" &&
           (grouped.length === 0 ? (
             <div style={{ textAlign: "center", padding: "50px 20px", border: "2px dashed #B8A576", borderRadius: 4 }}>
               <p style={{ fontSize: 17, marginBottom: 4 }}>Nothing posted for this stretch yet.</p>
@@ -352,111 +304,6 @@ export default function Bulletin() {
               </section>
             ))
           ))}
-
-        {!loading && view === "month" && (
-          <div>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-              <button
-                className="be-btn"
-                onClick={() =>
-                  setCursor((c) => {
-                    const m = c.month - 1;
-                    return m < 0 ? { year: c.year - 1, month: 11 } : { year: c.year, month: m };
-                  })
-                }
-                style={{ background: "transparent", border: "1.5px solid #2B2420", borderRadius: 3, padding: "6px 12px", fontSize: 16 }}
-              >
-                ‹
-              </button>
-              <h2 style={{ fontFamily: "'Special Elite', monospace", fontSize: 20, margin: 0 }}>{monthLabel}</h2>
-              <button
-                className="be-btn"
-                onClick={() =>
-                  setCursor((c) => {
-                    const m = c.month + 1;
-                    return m > 11 ? { year: c.year + 1, month: 0 } : { year: c.year, month: m };
-                  })
-                }
-                style={{ background: "transparent", border: "1.5px solid #2B2420", borderRadius: 3, padding: "6px 12px", fontSize: 16 }}
-              >
-                ›
-              </button>
-            </div>
-            <div
-              style={{
-                background: "#DED1A8",
-                backgroundImage: "radial-gradient(#C9B98A 1px, transparent 1px)",
-                backgroundSize: "14px 14px",
-                border: "1.5px solid #2B2420",
-                borderRadius: 4,
-                padding: 8,
-                maxWidth: 320,
-                margin: "0 auto",
-              }}
-            >
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3, marginBottom: 3 }}>
-                {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => (
-                  <div key={i} className="be-label" style={{ textAlign: "center", fontSize: 10, color: "#5A5040" }}>
-                    {d}
-                  </div>
-                ))}
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 3 }}>
-                {monthCells.map((date, i) => {
-                  const count = date ? monthCounts[date] || 0 : 0;
-                  const isToday = date === today;
-                  return (
-                    <button
-                      key={i}
-                      disabled={!date}
-                      onClick={() => date && setSelectedDay(date === selectedDay ? null : date)}
-                      style={{
-                        aspectRatio: "1",
-                        background: date ? "#FBF7EB" : "transparent",
-                        border: date === selectedDay ? "2px solid #9A3324" : isToday ? "2px solid #3F5443" : "1px solid #C9B98A",
-                        borderRadius: 2,
-                        cursor: date ? "pointer" : "default",
-                        position: "relative",
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        padding: 1,
-                      }}
-                    >
-                      {date && <span style={{ fontSize: 10.5, fontFamily: "'Barlow Condensed', sans-serif" }}>{Number(date.split("-")[2])}</span>}
-                      {count > 0 && <span style={{ width: 4, height: 4, borderRadius: "50%", background: "#9A3324", marginTop: 1 }} />}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {selectedDay && (
-              <div style={{ marginTop: 20 }}>
-                <h3
-                  style={{
-                    fontFamily: "'Barlow Condensed', sans-serif",
-                    fontSize: 15,
-                    letterSpacing: "0.06em",
-                    textTransform: "uppercase",
-                    color: "#9A3324",
-                    marginBottom: 12,
-                  }}
-                >
-                  {formatHeaderDate(selectedDay)}
-                </h3>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18 }}>
-                  {events
-                    .filter((e) => e.date === selectedDay && (activeTowns.size === 0 || activeTowns.has(e.town)))
-                    .map((e) => (
-                      <EventCard key={e.id} e={e} />
-                    ))}
-                </div>
-              </div>
-            )}
-          </div>
-        )}
 
         <section
           style={{
@@ -503,6 +350,19 @@ export default function Bulletin() {
           Email signups will be used to send weekly event summaries, which may include sponsored content.
         </p>
       </main>
+
+      <footer style={{ borderTop: "1.5px solid #B8A576", padding: "18px 20px 28px", background: "#E8DFC4" }}>
+        <div style={{ maxWidth: 960, margin: "0 auto", fontSize: 12, color: "#6B5D4F", lineHeight: 1.5 }}>
+          <p style={{ margin: "0 0 6px" }}>
+            Event information on this site is gathered from public sources and may not always be accurate or up to date. Please confirm details with the organizer before you go.
+          </p>
+          <p style={{ margin: 0 }}>
+            <Link href="/privacy" style={{ color: "#6B5D4F" }}>
+              Privacy Policy
+            </Link>
+          </p>
+        </div>
+      </footer>
     </div>
   );
 }
