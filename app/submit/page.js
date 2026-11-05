@@ -163,7 +163,7 @@ export default function SubmitEvent() {
             </Field>
 
             <Field label="Link to the public post *" hint="Where the event is announced, such as a Facebook post, a town page or a ticket page.">
-              <input required type="url" maxLength={500} placeholder="https://" value={form.url} onChange={set("url")} style={inputStyle} />
+              <input required type="text" inputMode="url" autoCapitalize="none" spellCheck={false} maxLength={500} placeholder="www.example.com or https://…" value={form.url} onChange={set("url")} style={inputStyle} />
             </Field>
 
             {/* Honeypot: hidden from people, but bots that fill every field will fill this. */}
