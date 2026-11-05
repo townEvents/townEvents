@@ -361,6 +361,10 @@ export default function Bulletin() {
               Submit an event
             </Link>
             {" · "}
+            <Link href="/contact" style={{ color: "#6B5D4F" }}>
+              Contact
+            </Link>
+            {" · "}
             <Link href="/privacy" style={{ color: "#6B5D4F" }}>
               Privacy Policy
             </Link>

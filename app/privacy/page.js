@@ -33,6 +33,11 @@ export default function PrivacyPage() {
           list. We don't ask for your name or any other contact information. Submissions are reviewed before anything is posted.
         </p>
 
+        <p style={body}>
+          If you write to us using the "Contact" form, we save your message and the email address you give, so that we can reply. We use
+          them only to respond to you. Your email address is not added to our mailing list. We don't ask for your name.
+        </p>
+
         <h2 style={heading}>Why we collect it</h2>
         <p style={body}>
           We collect email addresses to send a weekly email about what's going on in town. These emails may contain marketing messages.
