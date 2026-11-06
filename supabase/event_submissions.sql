@@ -25,6 +25,9 @@ alter table public.event_submissions add column contact_phone text check (contac
 -- Whether the "new submission" email to the site owner went out.
 alter table public.event_submissions add column notified boolean not null default false;
 
+-- Optional start time, stored in the live events table's "7:00 PM" style.
+alter table public.event_submissions add column event_time text check (event_time is null or char_length(event_time) <= 10);
+
 alter table public.event_submissions enable row level security;
 revoke all on public.event_submissions from anon, authenticated;
 grant select, insert, update, delete on public.event_submissions to service_role;

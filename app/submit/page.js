@@ -36,7 +36,7 @@ function Field({ label, hint, children }) {
   );
 }
 
-const emptyForm = { title: "", date: "", location: "", description: "", url: "", contact_name: "", contact_email: "", contact_phone: "", company: "" };
+const emptyForm = { title: "", date: "", time: "", location: "", description: "", url: "", contact_name: "", contact_email: "", contact_phone: "", company: "" };
 
 export default function SubmitEvent() {
   const today = todayStrEastern();
@@ -153,6 +153,10 @@ export default function SubmitEvent() {
 
             <Field label="Date *">
               <input required type="date" min={today} value={form.date} onChange={set("date")} style={inputStyle} />
+            </Field>
+
+            <Field label="Start time (optional)">
+              <input type="time" value={form.time} onChange={set("time")} style={inputStyle} />
             </Field>
 
             <Field label="Location *">

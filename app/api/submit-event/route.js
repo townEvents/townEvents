@@ -82,6 +82,7 @@ export async function POST(request) {
           "",
           `Event: ${s.title}`,
           `Date: ${s.event_date}`,
+          `Time: ${s.event_time || "(not given)"}`,
           `Location: ${s.location}`,
           `Link (unverified): ${s.url}`,
           "",
