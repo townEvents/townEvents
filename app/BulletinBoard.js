@@ -64,6 +64,16 @@ const PARTNERS = [
   },
 ];
 
+// The town buttons that are always shown, in this order.
+const CORE_TOWNS = ["Rutherford", "East Rutherford", "Carlstadt", "Lyndhurst", "North Arlington", "Wallington", "Secaucus", "MetLife Stadium"];
+
+// Most MetLife events are stored under the town "East Rutherford" with the
+// stadium as the location, so that button matches on either.
+function matchesChip(e, chip) {
+  if (chip === "MetLife Stadium") return e.town === "MetLife Stadium" || /metlife/i.test(e.location || "");
+  return e.town === chip;
+}
+
 function isValidEmail(v) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 }
@@ -134,12 +144,20 @@ export default function Bulletin() {
     })();
   }, []);
 
-  const towns = useMemo(() => [...new Set(events.map((e) => e.town))].sort(), [events]);
+  // Other towns, shown only while they have an upcoming event (so the button
+  // disappears on its own once the event has passed).
+  const extraTowns = useMemo(
+    () =>
+      [...new Set(events.filter((e) => e.date >= today).map((e) => e.town))]
+        .filter((t) => t && !CORE_TOWNS.includes(t))
+        .sort(),
+    [events, today]
+  );
 
   const filtered = useMemo(() => {
     return events
       .filter((e) => {
-        if (activeTowns.size > 0 && !activeTowns.has(e.town)) return false;
+        if (activeTowns.size > 0 && ![...activeTowns].some((chip) => matchesChip(e, chip))) return false;
         if (range === "all") {
           if (daysBetween(today, e.date) < 0) return false;
         } else if (!inRange(e.date, range, today)) return false;
@@ -276,9 +294,11 @@ export default function Bulletin() {
           </>
         )}
 
-        {(towns.length > 0 || PARTNERS.length > 0) && (
+        {(
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
-            {towns.map((t) => (
+            {/* The core towns are always shown (gold). Any other town only appears
+                (purple) while it has an upcoming event. */}
+            {[...CORE_TOWNS.map((t) => ({ name: t, extra: false })), ...extraTowns.map((t) => ({ name: t, extra: true }))].map(({ name: t, extra }) => (
               <button
                 key={t}
                 className="be-chip be-label"
@@ -288,9 +308,9 @@ export default function Bulletin() {
                   fontSize: 12.5,
                   borderRadius: 3,
                   cursor: "pointer",
-                  border: "1.5px solid #C68E17",
-                  background: activeTowns.has(t) ? "#C68E17" : "transparent",
-                  color: activeTowns.has(t) ? "#2B2420" : "#8A6A12",
+                  border: `1.5px solid ${extra ? "#6B4E71" : "#C68E17"}`,
+                  background: activeTowns.has(t) ? (extra ? "#6B4E71" : "#C68E17") : "transparent",
+                  color: activeTowns.has(t) ? (extra ? "#F4EEDB" : "#2B2420") : extra ? "#6B4E71" : "#8A6A12",
                   fontWeight: 600,
                 }}
               >
