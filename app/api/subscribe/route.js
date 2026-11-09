@@ -1,5 +1,7 @@
 import { Resend } from "resend";
 import { verifyTurnstile } from "../../../lib/turnstile";
+import { getSupabaseAdmin } from "../../../lib/supabaseAdmin";
+import { cleanScanCode } from "../../../lib/scanCodes";
 
 export async function POST(request) {
   let body;
@@ -40,6 +42,19 @@ export async function POST(request) {
       return Response.json({ duplicate: true });
     }
     return Response.json({ error: error.message }, { status: 500 });
+  }
+
+  // If this person arrived from a flyer link (?sc=business0007), credit the
+  // signup to it. Never affects the response: a counting problem must not
+  // turn a good signup into an error.
+  const scCode = cleanScanCode(body.sc);
+  if (scCode) {
+    try {
+      const { error: scError } = await getSupabaseAdmin().rpc("record_scan", { p_code: scCode, p_kind: "signup" });
+      if (scError) console.error("Signup count failed:", scError.message);
+    } catch (err) {
+      console.error("Signup count failed:", err.message);
+    }
   }
 
   return Response.json({ success: true });

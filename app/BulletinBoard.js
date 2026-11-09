@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import Link from "next/link";
 import { supabase } from "../lib/supabaseClient";
 import { todayStrEastern, addDaysToDateStr, daysBetween } from "../lib/dates";
+import { cleanScanCode } from "../lib/scanCodes";
 
 const CATS = {
   Music: "#9A3324",
@@ -111,6 +112,32 @@ export default function Bulletin() {
   const turnstileWidgetIdRef = useRef(null);
   const turnstileTokenRef = useRef("");
 
+  // Flyer links look like /?sc=business0007. Count the visit once, remember
+  // the code in memory only (so a signup on this page can be credited to it),
+  // then tidy it off the address bar so a reload isn't counted twice. Only an
+  // exact business0001-business9999 code is used; anything else is ignored.
+  const scCodeRef = useRef(null);
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      if (!params.has("sc")) return;
+      const code = cleanScanCode(params.get("sc"));
+      params.delete("sc");
+      const rest = params.toString();
+      window.history.replaceState(null, "", window.location.pathname + (rest ? `?${rest}` : "") + window.location.hash);
+      if (!code) return;
+      scCodeRef.current = code;
+      fetch("/api/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code }),
+        keepalive: true,
+      }).catch(() => {});
+    } catch (err) {
+      // Counting is best-effort and must never get in the way of the page.
+    }
+  }, []);
+
   // Load Cloudflare Turnstile once, then render an invisible widget that
   // verifies real visitors with no click or puzzle for legitimate people -
   // it only challenges something that looks bot-like, and even then it's
@@ -214,7 +241,7 @@ export default function Bulletin() {
       const res = await fetch("/api/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim().toLowerCase(), turnstileToken: turnstileTokenRef.current }),
+        body: JSON.stringify({ email: email.trim().toLowerCase(), turnstileToken: turnstileTokenRef.current, sc: scCodeRef.current }),
       });
       const data = await res.json();
 
