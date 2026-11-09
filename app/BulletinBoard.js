@@ -44,7 +44,7 @@ function inRange(dateStr, range, today) {
   return daysBetween(today, dateStr) >= 0;
 }
 
-// Local sites worth a visit, shown as cards behind the "Local Resources" button.
+// Local sites worth a visit, shown as cards behind the "Rutherford Resources" button.
 // To add or change one, edit this list - nothing else needs touching.
 const PARTNERS = [
   {
@@ -260,8 +260,8 @@ export default function Bulletin() {
           </div>
         )}
 
-        {!showPartners && (
-          <>
+        {/* Hidden (not removed) in the resources view, so the page doesn't jump. */}
+        <div style={{ visibility: showPartners ? "hidden" : "visible" }} aria-hidden={showPartners}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 18, alignItems: "center" }}>
           <input
             type="text"
@@ -291,8 +291,7 @@ export default function Bulletin() {
             </button>
           ))}
         </div>
-          </>
-        )}
+        </div>
 
         {(
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
@@ -333,7 +332,7 @@ export default function Bulletin() {
                   fontWeight: 600,
                 }}
               >
-                Local Resources
+                Rutherford Resources
               </button>
             )}
           </div>
@@ -353,7 +352,7 @@ export default function Bulletin() {
                 marginBottom: 6,
               }}
             >
-              Local resources
+              Rutherford resources
             </h2>
             <p style={{ fontSize: 13.5, color: "#5A5040", margin: "0 0 14px", lineHeight: 1.4 }}>
               Good places to find even more happening around town.
