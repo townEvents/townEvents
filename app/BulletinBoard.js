@@ -68,11 +68,6 @@ const PARTNERS = [
     url: "https://rutherfordnj.recdesk.com/Community/Calendar",
   },
   {
-    name: "Rutherford Arts Council",
-    description: "Bringing art to your neighborhood: exhibits, performances and more.",
-    url: "https://rutherfordartscouncil.org/",
-  },
-  {
     name: "Rutherford Police Department",
     description: "Contact information and updates from the Rutherford Police Department.",
     url: "https://www.rutherfordboronj.com/departments/police",
