@@ -50,7 +50,7 @@ const PARTNERS = [
   {
     name: "Rutherford Public Library",
     description: "Programs, story times, author talks and community events for all ages.",
-    url: "https://rutherfordlibrary.org/",
+    url: "https://rutherfordlibrary.org/events/",
   },
   {
     name: "Rutherford Borough Calendar",
@@ -61,6 +61,15 @@ const PARTNERS = [
     name: "Rutherford Arts Council",
     description: "Bringing art to your neighborhood: exhibits, performances and more.",
     url: "https://rutherfordartscouncil.org/",
+  },
+  {
+    name: "Rutherford Police Department",
+    description: "Contact information and updates from the Rutherford Police Department.",
+    url: "https://www.rutherfordboronj.com/departments/police",
+    phones: [
+      { label: "Phone", display: "201-939-6000", tel: "+12019396000" },
+      { label: "Emergency", display: "911", tel: "911" },
+    ],
   },
 ];
 
@@ -232,6 +241,7 @@ export default function Bulletin() {
       <style>{`
         .be-label { font-family: 'Barlow Condensed', sans-serif; text-transform: uppercase; letter-spacing: 0.08em; }
         .be-btn { cursor: pointer; border: none; font-family: 'Barlow Condensed', sans-serif; text-transform: uppercase; letter-spacing: 0.06em; }
+        .be-btn:disabled, fieldset:disabled input { cursor: default; }
         .be-btn:focus-visible, .be-chip:focus-visible, input:focus-visible { outline: 2px solid #9A3324; outline-offset: 2px; }
         @media (prefers-reduced-motion: no-preference) {
           .be-card { transition: transform 0.15s ease; }
@@ -260,8 +270,8 @@ export default function Bulletin() {
           </div>
         )}
 
-        {/* Hidden (not removed) in the resources view, so the page doesn't jump. */}
-        <div style={{ visibility: showPartners ? "hidden" : "visible" }} aria-hidden={showPartners}>
+        {/* Greyed out and disabled (not removed) in the resources view, so the page doesn't jump. */}
+        <fieldset disabled={showPartners} style={{ border: 0, padding: 0, margin: 0, minWidth: 0, opacity: showPartners ? 0.4 : 1 }}>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 18, alignItems: "center" }}>
           <input
             type="text"
@@ -291,7 +301,7 @@ export default function Bulletin() {
             </button>
           ))}
         </div>
-        </div>
+        </fieldset>
 
         {(
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
@@ -359,29 +369,42 @@ export default function Bulletin() {
             </p>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18 }}>
               {PARTNERS.map((p) => (
-                <a
+                <div
                   key={p.url}
-                  href={p.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
                   className="be-card"
                   style={{
-                    display: "block",
                     background: "#FBF7EB",
                     border: "1.5px solid #2B2420",
                     borderRadius: 3,
                     padding: "14px 16px",
                     boxShadow: "3px 3px 0 rgba(43,36,32,0.2)",
                     color: "#2B2420",
-                    textDecoration: "none",
                   }}
                 >
                   <div style={{ fontFamily: "'Special Elite', monospace", fontSize: 17, marginBottom: 6 }}>{p.name}</div>
                   <p style={{ fontSize: 13.5, color: "#5A5040", margin: "0 0 10px", lineHeight: 1.4 }}>{p.description}</p>
-                  <span className="be-label" style={{ fontSize: 12.5, color: "#9A3324", fontWeight: 600 }}>
+                  {p.phones && (
+                    <p style={{ fontSize: 14, margin: "0 0 10px", lineHeight: 1.6 }}>
+                      {p.phones.map((ph) => (
+                        <span key={ph.label} style={{ display: "block" }}>
+                          {ph.label}:{" "}
+                          <a href={`tel:${ph.tel}`} style={{ color: "#2B2420", fontWeight: 600 }}>
+                            {ph.display}
+                          </a>
+                        </span>
+                      ))}
+                    </p>
+                  )}
+                  <a
+                    href={p.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="be-label"
+                    style={{ fontSize: 12.5, color: "#9A3324", fontWeight: 600, textDecoration: "none" }}
+                  >
                     Visit site ↗
-                  </span>
-                </a>
+                  </a>
+                </div>
               ))}
             </div>
           </section>
