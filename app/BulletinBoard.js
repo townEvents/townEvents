@@ -44,6 +44,26 @@ function inRange(dateStr, range, today) {
   return daysBetween(today, dateStr) >= 0;
 }
 
+// Local sites worth a visit, shown as cards behind the "Partners" button.
+// To add or change one, edit this list - nothing else needs touching.
+const PARTNERS = [
+  {
+    name: "Rutherford Public Library",
+    description: "Programs, story times, author talks and community events for all ages.",
+    url: "https://rutherfordlibrary.org/",
+  },
+  {
+    name: "Rutherford Borough Calendar",
+    description: "The borough's official calendar of meetings, events and notices.",
+    url: "https://www.rutherfordboronj.com/resident/calendar",
+  },
+  {
+    name: "Rutherford Arts Council",
+    description: "Bringing art to your neighborhood: exhibits, performances and more.",
+    url: "https://rutherfordartscouncil.org/",
+  },
+];
+
 function isValidEmail(v) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 }
@@ -57,6 +77,7 @@ export default function Bulletin() {
   const [search, setSearch] = useState("");
   const [activeTowns, setActiveTowns] = useState(new Set());
   const [range, setRange] = useState("week");
+  const [showPartners, setShowPartners] = useState(false); // partner cards replace the event list
 
   const [email, setEmail] = useState("");
   const [subStatus, setSubStatus] = useState(""); // "", "success", "duplicate", "error", "invalid"
@@ -142,6 +163,7 @@ export default function Bulletin() {
   }, [filtered]);
 
   function toggleTown(t) {
+    setShowPartners(false); // picking a town goes back to the events
     setActiveTowns((prev) => {
       const next = new Set(prev);
       if (next.has(t)) next.delete(t);
@@ -214,12 +236,14 @@ export default function Bulletin() {
       </header>
 
       <main style={{ maxWidth: 960, margin: "0 auto", padding: "24px 20px 60px" }}>
-        {loadError && (
+        {loadError && !showPartners && (
           <div style={{ background: "#F3D9D9", border: "1px solid #9A3324", padding: "10px 14px", borderRadius: 3, marginBottom: 16, fontSize: 14 }}>
             Couldn't load events right now. Check back in a bit.
           </div>
         )}
 
+        {!showPartners && (
+          <>
         <div style={{ display: "flex", flexWrap: "wrap", gap: 10, marginBottom: 18, alignItems: "center" }}>
           <input
             type="text"
@@ -249,8 +273,10 @@ export default function Bulletin() {
             </button>
           ))}
         </div>
+          </>
+        )}
 
-        {towns.length > 0 && (
+        {(towns.length > 0 || PARTNERS.length > 0) && (
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 24 }}>
             {towns.map((t) => (
               <button
@@ -271,12 +297,80 @@ export default function Bulletin() {
                 {t}
               </button>
             ))}
+            {PARTNERS.length > 0 && (
+              <button
+                className="be-chip be-label"
+                onClick={() => setShowPartners((v) => !v)}
+                aria-pressed={showPartners}
+                style={{
+                  padding: "6px 12px",
+                  fontSize: 12.5,
+                  borderRadius: 3,
+                  cursor: "pointer",
+                  border: "1.5px solid #9A3324",
+                  background: showPartners ? "#9A3324" : "transparent",
+                  color: showPartners ? "#F4EEDB" : "#9A3324",
+                  fontWeight: 600,
+                }}
+              >
+                Partners
+              </button>
+            )}
           </div>
         )}
 
-        {loading && <p style={{ color: "#6B5D4F" }}>Loading the board…</p>}
+        {showPartners && (
+          <section style={{ marginBottom: 30 }}>
+            <h2
+              style={{
+                fontFamily: "'Barlow Condensed', sans-serif",
+                fontSize: 15,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "#9A3324",
+                borderBottom: "1.5px solid #B8A576",
+                paddingBottom: 6,
+                marginBottom: 6,
+              }}
+            >
+              Local partners
+            </h2>
+            <p style={{ fontSize: 13.5, color: "#5A5040", margin: "0 0 14px", lineHeight: 1.4 }}>
+              Good places to find even more happening around town.
+            </p>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 18 }}>
+              {PARTNERS.map((p) => (
+                <a
+                  key={p.url}
+                  href={p.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="be-card"
+                  style={{
+                    display: "block",
+                    background: "#FBF7EB",
+                    border: "1.5px solid #2B2420",
+                    borderRadius: 3,
+                    padding: "14px 16px",
+                    boxShadow: "3px 3px 0 rgba(43,36,32,0.2)",
+                    color: "#2B2420",
+                    textDecoration: "none",
+                  }}
+                >
+                  <div style={{ fontFamily: "'Special Elite', monospace", fontSize: 17, marginBottom: 6 }}>{p.name}</div>
+                  <p style={{ fontSize: 13.5, color: "#5A5040", margin: "0 0 10px", lineHeight: 1.4 }}>{p.description}</p>
+                  <span className="be-label" style={{ fontSize: 12.5, color: "#9A3324", fontWeight: 600 }}>
+                    Visit site ↗
+                  </span>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
 
-        {!loading &&
+        {!showPartners && loading && <p style={{ color: "#6B5D4F" }}>Loading the board…</p>}
+
+        {!showPartners && !loading &&
           (grouped.length === 0 ? (
             <div style={{ textAlign: "center", padding: "50px 20px", border: "2px dashed #B8A576", borderRadius: 4 }}>
               <p style={{ fontSize: 17, marginBottom: 4 }}>Nothing posted for this stretch yet.</p>
