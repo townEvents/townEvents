@@ -58,6 +58,16 @@ const PARTNERS = [
     url: "https://www.rutherfordboronj.com/resident/calendar",
   },
   {
+    name: "District Calendars",
+    description: "Rutherford Public Schools calendars: school days, holidays and events.",
+    url: "https://www.rutherfordschools.org/districtcalendars/",
+  },
+  {
+    name: "Rec Desk Calendar",
+    description: "Rutherford's community calendar of recreation programs and events.",
+    url: "https://rutherfordnj.recdesk.com/Community/Calendar",
+  },
+  {
     name: "Rutherford Arts Council",
     description: "Bringing art to your neighborhood: exhibits, performances and more.",
     url: "https://rutherfordartscouncil.org/",
