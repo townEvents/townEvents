@@ -44,7 +44,7 @@ function inRange(dateStr, range, today) {
   return daysBetween(today, dateStr) >= 0;
 }
 
-// Local sites worth a visit, shown as cards behind the "Partners" button.
+// Local sites worth a visit, shown as cards behind the "Local Resources" button.
 // To add or change one, edit this list - nothing else needs touching.
 const PARTNERS = [
   {
@@ -313,7 +313,7 @@ export default function Bulletin() {
                   fontWeight: 600,
                 }}
               >
-                Partners
+                Local Resources
               </button>
             )}
           </div>
@@ -333,7 +333,7 @@ export default function Bulletin() {
                 marginBottom: 6,
               }}
             >
-              Local partners
+              Local resources
             </h2>
             <p style={{ fontSize: 13.5, color: "#5A5040", margin: "0 0 14px", lineHeight: 1.4 }}>
               Good places to find even more happening around town.
