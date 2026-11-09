@@ -60,6 +60,7 @@ export default function Bulletin() {
 
   const [email, setEmail] = useState("");
   const [subStatus, setSubStatus] = useState(""); // "", "success", "duplicate", "error", "invalid"
+  const [signedUpEmail, setSignedUpEmail] = useState(""); // shown back to the visitor so a typo is easy to spot
 
   const turnstileContainerRef = useRef(null);
   const turnstileWidgetIdRef = useRef(null);
@@ -178,6 +179,7 @@ export default function Bulletin() {
         setSubStatus("duplicate");
         return;
       }
+      setSignedUpEmail(email.trim().toLowerCase());
       setSubStatus("success");
       setEmail("");
     } catch (err) {
@@ -342,7 +344,16 @@ export default function Bulletin() {
               Subscribe
             </button>
           </form>
-          {subStatus === "success" && <p style={{ width: "100%", margin: 0, fontSize: 13, color: "#3F5443" }}>You're on the list — welcome!</p>}
+          {subStatus === "success" && (
+            <div style={{ width: "100%", fontSize: 13, color: "#3F5443" }} role="status">
+              <p style={{ margin: 0 }}>You're on the list — welcome!</p>
+              <p style={{ margin: "6px 0 0", color: "#2B2420" }}>
+                You signed up with the following email address:{" "}
+                <strong style={{ overflowWrap: "anywhere" }}>{signedUpEmail}</strong>
+              </p>
+              <p style={{ margin: "4px 0 0", color: "#5A5040" }}>Doesn't look right? Just sign up again with the correct address.</p>
+            </div>
+          )}
           {subStatus === "duplicate" && <p style={{ width: "100%", margin: 0, fontSize: 13, color: "#5A5040" }}>That email's already signed up.</p>}
           {subStatus === "invalid" && <p style={{ width: "100%", margin: 0, fontSize: 13, color: "#9A3324" }}>That doesn't look like a valid email.</p>}
           {subStatus === "error" && <p style={{ width: "100%", margin: 0, fontSize: 13, color: "#9A3324" }}>Something went wrong — try again in a moment.</p>}
