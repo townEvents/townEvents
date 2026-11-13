@@ -69,6 +69,11 @@ const PARTNERS = [
     url: "https://rutherfordnj.recdesk.com/Community/Calendar",
   },
   {
+    name: "Williams Center",
+    description: "Shows, concerts and community events at the Williams Center for the Arts.",
+    url: "https://www.williamscenter.co/events/",
+  },
+  {
     name: "Rutherford Police Department",
     description: "Contact information and updates from the Rutherford Police Department.",
     url: "https://www.rutherfordboronj.com/departments/police",
