@@ -50,7 +50,7 @@ export async function GET(request) {
   [...byDate.entries()].sort((a, b) => a[0].localeCompare(b[0])).forEach((entry) => grouped.push(entry));
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://www.rutherfordbulletin.com";
-  const subject = `This week in Rutherford - ${formatShort(startStr)}–${formatShort(endStr)}`;
+  const subject = `🌳 This week in Rutherford -${formatShort(startStr)}–${formatShort(endStr)}`;
 
   if (!process.env.RESEND_API_KEY || !process.env.RESEND_FROM_EMAIL) {
     return Response.json({ error: "Missing RESEND_API_KEY or RESEND_FROM_EMAIL" }, { status: 500 });
