@@ -40,7 +40,7 @@ function inRange(dateStr, range, today) {
   if (range === "month") {
     const [ty, tm] = today.split("-");
     const [ey, em] = dateStr.split("-");
-    return ty === ey && tm === em;
+    return ty === ey && tm === em && daysBetween(today, dateStr) >= 0;
   }
   return daysBetween(today, dateStr) >= 0;
 }
