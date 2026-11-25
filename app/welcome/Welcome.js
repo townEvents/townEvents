@@ -158,24 +158,25 @@ export default function Welcome() {
         @media (max-width: 520px) { .wl-form button { width: 100%; } }
       `}</style>
 
-      <header style={{ borderBottom: "3px double #2B2420", padding: "22px 20px 24px", background: "#E8DFC4" }}>
+      <header style={{ borderBottom: "3px double #2B2420", padding: "22px 20px 18px", background: "#E8DFC4" }}>
         <div style={{ maxWidth: 920, margin: "0 auto" }}>
           <div className="be-label" style={{ fontSize: 12.5, color: "#9A3324", fontWeight: 600 }}>
             Rutherford · East Rutherford · Carlstadt · Lyndhurst · North Arlington · Wallington
           </div>
-          <h1 style={{ fontFamily: "'Special Elite', monospace", fontSize: "clamp(30px, 6vw, 40px)", margin: "6px 0 12px", lineHeight: 1.05, fontWeight: 400 }}>
+          <h1 style={{ fontFamily: "'Special Elite', monospace", fontSize: "clamp(30px, 6vw, 40px)", margin: "6px 0 0", lineHeight: 1.05, fontWeight: 400 }}>
             Rutherford Bulletin
           </h1>
-          <p style={{ fontSize: "clamp(19px, 3.4vw, 22px)", fontWeight: 700, lineHeight: 1.25, margin: "0 0 8px" }}>
-            The free community calendar for Rutherford and the towns around it.
-          </p>
-          <p style={{ fontSize: 16, color: "#5A5040", lineHeight: 1.5, margin: 0, maxWidth: 640 }}>
-            Markets, concerts, fundraisers, meetings, kids' activities and more, all gathered in one place so you don't find out after it's over.
-          </p>
         </div>
       </header>
 
       <main style={{ maxWidth: 920, margin: "0 auto", padding: "26px 20px 40px" }}>
+        <p style={{ fontSize: "clamp(19px, 3.4vw, 22px)", fontWeight: 700, lineHeight: 1.25, margin: "0 0 8px" }}>
+          The free community calendar for Rutherford and the towns around it.
+        </p>
+        <p style={{ fontSize: 16, color: "#5A5040", lineHeight: 1.5, margin: "0 0 22px", maxWidth: 640 }}>
+          Markets, concerts, fundraisers, meetings, kids' activities and more, all gathered in one place so you don't find out after it's over.
+        </p>
+
         <section
           style={{
             background: "#E8DFC4",
